@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Project } from '@/lib/types';
-import { storage } from '@/lib/storage';
+import { ImportProjectsResult, storage } from '@/lib/storage';
 
 let listeners: Array<() => void> = [];
 
@@ -43,11 +43,24 @@ export function useProjects() {
     emitChange();
   };
 
+  const exportProjects = () => storage.exportProjects();
+
+  const importProjects = (
+    rawData: string,
+    mode: 'replace' | 'merge' = 'merge'
+  ): ImportProjectsResult => {
+    const result = storage.importProjects(rawData, mode);
+    emitChange();
+    return result;
+  };
+
   return {
     projects,
     addProject,
     updateProject,
     deleteProject,
+    exportProjects,
+    importProjects,
     mounted,
   };
 }

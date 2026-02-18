@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,8 @@ interface HeaderProps {
   activeFilter: ProjectType | 'all';
   onFilterChange: (filter: ProjectType | 'all') => void;
   onAddProject: () => void;
+  onExportProjects: () => void;
+  onImportProjects: (file: File) => void;
 }
 
 const filters: Array<{ value: ProjectType | 'all'; label: string }> = [
@@ -27,7 +30,11 @@ export function Header({
   activeFilter,
   onFilterChange,
   onAddProject,
+  onExportProjects,
+  onImportProjects,
 }: HeaderProps) {
+  const importInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container mx-auto px-6 py-4">
@@ -72,10 +79,33 @@ export function Header({
           </div>
 
           {/* Add button */}
-          <Button onClick={onAddProject} variant="outline" className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onImportProjects(file);
+                event.target.value = '';
+              }}
+            />
+            <Button
+              onClick={() => importInputRef.current?.click()}
+              variant="ghost"
+              className="h-9 px-3"
+            >
+              Import
+            </Button>
+            <Button onClick={onExportProjects} variant="ghost" className="h-9 px-3">
+              Export
+            </Button>
+            <Button onClick={onAddProject} variant="outline" className="gap-2 h-9 px-3">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+          </div>
         </div>
       </div>
     </header>

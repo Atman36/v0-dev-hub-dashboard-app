@@ -1,6 +1,17 @@
 import { Project } from './types';
+import { parseImportedProjects, serializeProjectsForExport } from './project-exchange';
 
 const STORAGE_KEY = 'devhub_projects';
+
+type ImportMode = 'replace' | 'merge';
+
+export interface ImportProjectsResult {
+  imported: number;
+  skipped: number;
+  total: number;
+  mode: ImportMode;
+  detectedFormat: string;
+}
 
 export const storage = {
   getProjects(): Project[] {
@@ -44,6 +55,40 @@ export const storage = {
 
   getProject(id: string): Project | undefined {
     return this.getProjects().find((p) => p.id === id);
+  },
+
+  exportProjects(): string {
+    return serializeProjectsForExport(this.getProjects());
+  },
+
+  importProjects(rawData: string, mode: ImportMode = 'merge'): ImportProjectsResult {
+    const currentProjects = this.getProjects();
+    const importedPayload = parseImportedProjects(rawData);
+
+    if (mode === 'replace') {
+      this.saveProjects(importedPayload.projects);
+      return {
+        imported: importedPayload.projects.length,
+        skipped: importedPayload.skipped,
+        total: importedPayload.projects.length,
+        mode,
+        detectedFormat: importedPayload.detectedFormat,
+      };
+    }
+
+    const byId = new Map(currentProjects.map((project) => [project.id, project]));
+    importedPayload.projects.forEach((project) => byId.set(project.id, project));
+
+    const mergedProjects = Array.from(byId.values());
+    this.saveProjects(mergedProjects);
+
+    return {
+      imported: importedPayload.projects.length,
+      skipped: importedPayload.skipped,
+      total: mergedProjects.length,
+      mode,
+      detectedFormat: importedPayload.detectedFormat,
+    };
   },
 };
 

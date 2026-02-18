@@ -8,10 +8,18 @@ import { AddProjectDialog } from '@/components/add-project-dialog';
 import { ProjectDetail } from '@/components/project-detail';
 import { Project, ProjectType } from '@/lib/types';
 import { FileCode2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 
 export default function HomePage() {
-  const { projects, addProject, updateProject, mounted } = useProjects();
+  const {
+    projects,
+    addProject,
+    updateProject,
+    exportProjects,
+    importProjects,
+    mounted,
+  } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ProjectType | 'all'>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -65,6 +73,34 @@ export default function HomePage() {
     (p) => p.type === 'mobile' || p.type === 'telegram'
   );
 
+  const handleExportProjects = () => {
+    const payload = exportProjects();
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `devhub-projects-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Projects exported');
+  };
+
+  const handleImportProjects = async (file: File) => {
+    try {
+      const rawData = await file.text();
+      const result = importProjects(rawData, 'merge');
+      toast.success(
+        `Imported ${result.imported} project${result.imported === 1 ? '' : 's'} (${result.mode})`
+      );
+      if (result.skipped > 0) {
+        toast.info(`Skipped ${result.skipped} invalid record${result.skipped === 1 ? '' : 's'}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown import error';
+      toast.error(`Import failed: ${message}`);
+    }
+  };
+
   // Show project detail if selected
   if (selectedProject) {
     return (
@@ -97,6 +133,8 @@ export default function HomePage() {
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
           onAddProject={() => setShowAddDialog(true)}
+          onExportProjects={handleExportProjects}
+          onImportProjects={handleImportProjects}
         />
 
         <main className="container mx-auto px-6 py-12 space-y-16">
