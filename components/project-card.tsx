@@ -93,6 +93,7 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
               size="sm"
               onClick={handleGitHub}
               className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              aria-label="View GitHub repository"
             >
               <Github className="h-4 w-4" />
             </Button>
@@ -103,6 +104,7 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
               size="sm"
               onClick={handleLive}
               className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              aria-label="Open live site"
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
@@ -125,6 +127,7 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
             variant="ghost"
             size="sm"
             className="ml-auto h-8 px-2 text-muted-foreground hover:text-foreground"
+            aria-label="View project details"
           >
             <ArrowRight className="h-4 w-4" />
           </Button>
