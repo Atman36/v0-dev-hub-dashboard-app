@@ -6,7 +6,7 @@ import { Header } from '@/components/header';
 import { ProjectCard } from '@/components/project-card';
 import { AddProjectDialog } from '@/components/add-project-dialog';
 import { ProjectDetail } from '@/components/project-detail';
-import { Project, ProjectType } from '@/lib/types';
+import { ProjectType } from '@/lib/types';
 import { FileCode2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -23,7 +23,13 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ProjectType | 'all'>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [startInEditMode, setStartInEditMode] = useState(false);
+
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.id === selectedProjectId) ?? null,
+    [projects, selectedProjectId]
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -101,14 +107,27 @@ export default function HomePage() {
     }
   };
 
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    const exists = projects.some((project) => project.id === selectedProjectId);
+    if (!exists) {
+      setSelectedProjectId(null);
+      setStartInEditMode(false);
+    }
+  }, [projects, selectedProjectId]);
+
   // Show project detail if selected
   if (selectedProject) {
     return (
       <>
         <ProjectDetail
           project={selectedProject}
-          onBack={() => setSelectedProject(null)}
+          onBack={() => {
+            setSelectedProjectId(null);
+            setStartInEditMode(false);
+          }}
           onUpdate={updateProject}
+          startInEditMode={startInEditMode}
         />
         <Toaster position="bottom-right" />
       </>
@@ -150,7 +169,14 @@ export default function HomePage() {
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      onClick={() => setSelectedProject(project)}
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(false);
+                      }}
+                      onEdit={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(true);
+                      }}
                       aspectRatio="video"
                     />
                   ))}
@@ -178,7 +204,14 @@ export default function HomePage() {
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      onClick={() => setSelectedProject(project)}
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(false);
+                      }}
+                      onEdit={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(true);
+                      }}
                       aspectRatio="portrait"
                     />
                   ))}

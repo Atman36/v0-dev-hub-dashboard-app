@@ -5,6 +5,37 @@ const STORAGE_KEY = 'devhub_projects';
 
 type ImportMode = 'replace' | 'merge';
 
+function isQuotaExceededError(error: unknown): boolean {
+  if (!(error instanceof DOMException)) return false;
+  return error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED';
+}
+
+function dropLargestImage(projects: Project[]): boolean {
+  let largestProjectIndex = -1;
+  let largestImageIndex = -1;
+  let largestImageSize = 0;
+
+  projects.forEach((project, projectIndex) => {
+    project.images.forEach((image, imageIndex) => {
+      if (image.length > largestImageSize) {
+        largestImageSize = image.length;
+        largestProjectIndex = projectIndex;
+        largestImageIndex = imageIndex;
+      }
+    });
+  });
+
+  if (largestProjectIndex === -1 || largestImageIndex === -1) return false;
+
+  const targetProject = projects[largestProjectIndex];
+  projects[largestProjectIndex] = {
+    ...targetProject,
+    images: targetProject.images.filter((_, index) => index !== largestImageIndex),
+  };
+
+  return true;
+}
+
 export interface ImportProjectsResult {
   imported: number;
   skipped: number;
@@ -26,9 +57,37 @@ export const storage = {
 
   saveProjects(projects: Project[]): void {
     if (typeof window === 'undefined') return;
+    const payload = JSON.stringify(projects);
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+      localStorage.setItem(STORAGE_KEY, payload);
     } catch (error) {
+      if (isQuotaExceededError(error)) {
+        const reducedProjects = projects.map((project) => ({
+          ...project,
+          images: [...project.images],
+        }));
+
+        let removedImages = 0;
+        while (dropLargestImage(reducedProjects)) {
+          removedImages += 1;
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(reducedProjects));
+            console.warn(
+              `[v0] Storage quota exceeded, removed ${removedImages} screenshot(s) to save projects.`
+            );
+            return;
+          } catch (fallbackError) {
+            if (!isQuotaExceededError(fallbackError)) {
+              console.error('[v0] Failed to save projects:', fallbackError);
+              return;
+            }
+          }
+        }
+
+        console.error('[v0] Failed to save projects: storage quota exceeded and no screenshots left to remove.');
+        return;
+      }
       console.error('[v0] Failed to save projects:', error);
     }
   },

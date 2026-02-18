@@ -5,16 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from './status-badge';
-import { ExternalLink, Github, ArrowRight } from 'lucide-react';
+import { ExternalLink, Github, ArrowRight, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProjectCardProps {
   project: Project;
   onClick: () => void;
+  onEdit?: () => void;
   aspectRatio?: 'video' | 'portrait';
 }
 
-export function ProjectCard({ project, onClick, aspectRatio = 'video' }: ProjectCardProps) {
+export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {
   const handleGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (project.githubUrl) window.open(project.githubUrl, '_blank');
@@ -104,6 +105,20 @@ export function ProjectCard({ project, onClick, aspectRatio = 'video' }: Project
               className="h-8 px-2 text-muted-foreground hover:text-foreground"
             >
               <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              aria-label="Edit project"
+            >
+              <Pencil className="h-4 w-4" />
             </Button>
           )}
           <Button

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Project, ProjectStatus, Task } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,20 +23,135 @@ import {
   FolderOpen,
   Plus,
   X,
+  Pencil,
+  Save,
+  Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateId } from '@/lib/storage';
 import { toast } from 'sonner';
 
+type EditableProjectFields = Pick<
+  Project,
+  'title' | 'type' | 'category' | 'githubUrl' | 'liveUrl' | 'localPath' | 'description' | 'images'
+>;
+
+function getEditableProjectFields(project: Project): EditableProjectFields {
+  return {
+    title: project.title,
+    type: project.type,
+    category: project.category,
+    githubUrl: project.githubUrl,
+    liveUrl: project.liveUrl,
+    localPath: project.localPath,
+    description: project.description,
+  };
+}
+
 interface ProjectDetailProps {
   project: Project;
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<Project>) => void;
+  startInEditMode?: boolean;
 }
 
-export function ProjectDetail({ project, onBack, onUpdate }: ProjectDetailProps) {
+export function ProjectDetail({
+  project,
+  onBack,
+  onUpdate,
+  startInEditMode = false,
+}: ProjectDetailProps) {
   const [copied, setCopied] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
+  const [isEditing, setIsEditing] = useState(startInEditMode);
+  const [editableProject, setEditableProject] = useState<EditableProjectFields>(() =>
+    getEditableProjectFields(project)
+  );
+  const [replaceImageIndex, setReplaceImageIndex] = useState<number | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setIsEditing(startInEditMode);
+  }, [project.id, startInEditMode]);
+
+  useEffect(() => {
+    if (isEditing) return;
+    setEditableProject(getEditableProjectFields(project));
+  }, [
+    project.title,
+    project.type,
+    project.category,
+    project.githubUrl,
+    project.liveUrl,
+    project.localPath,
+    project.description,
+    project.images,
+    isEditing,
+  ]);
+
+  const readImageFile = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result;
+        if (typeof result === 'string') {
+          resolve(result);
+          return;
+        }
+        reject(new Error('Invalid image data'));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read image'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = event.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    try {
+      if (replaceImageIndex !== null) {
+        const file = fileList[0];
+        const base64Image = await readImageFile(file);
+        setEditableProject((prev) => {
+          const images = [...prev.images];
+          images[replaceImageIndex] = base64Image;
+          return { ...prev, images };
+        });
+        toast.success('Screenshot replaced');
+      } else {
+        const files = Array.from(fileList);
+        const newImages = await Promise.all(files.map((file) => readImageFile(file)));
+        setEditableProject((prev) => ({
+          ...prev,
+          images: [...prev.images, ...newImages],
+        }));
+        toast.success(`Added ${newImages.length} screenshot${newImages.length === 1 ? '' : 's'}`);
+      }
+    } catch {
+      toast.error('Failed to process image');
+    } finally {
+      setReplaceImageIndex(null);
+      event.target.value = '';
+    }
+  };
+
+  const openImagePicker = (mode: 'add' | 'replace', index?: number) => {
+    if (mode === 'replace') {
+      if (typeof index !== 'number') return;
+      setReplaceImageIndex(index);
+    } else {
+      setReplaceImageIndex(null);
+    }
+    uploadInputRef.current?.click();
+  };
+
+  const handleDeleteImage = (index: number) => {
+    setEditableProject((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, imageIndex) => imageIndex !== index),
+    }));
+    toast.success('Screenshot removed');
+  };
 
   const handleCopyPath = () => {
     navigator.clipboard.writeText(project.localPath);
@@ -60,14 +175,35 @@ export function ProjectDetail({ project, onBack, onUpdate }: ProjectDetailProps)
   };
 
   const handleAddTask = () => {
-    if (!newTaskText.trim()) return;
+    const taskText = newTaskText.trim();
+    if (!taskText) return;
+
     const newTask: Task = {
       id: generateId(),
-      text: newTaskText,
+      text: taskText,
       isDone: false,
     };
     onUpdate(project.id, { tasks: [...project.tasks, newTask] });
     setNewTaskText('');
+  };
+
+  const handleSaveProject = () => {
+    const title = editableProject.title.trim();
+    if (!title) {
+      toast.error('Title is required');
+      return;
+    }
+
+    const updates: EditableProjectFields = {
+      ...editableProject,
+      title,
+      description: editableProject.description.trim(),
+    };
+
+    onUpdate(project.id, updates);
+    setEditableProject(updates);
+    setIsEditing(false);
+    toast.success('Project updated');
   };
 
   const handleToggleTask = (taskId: string) => {
@@ -135,39 +271,214 @@ export function ProjectDetail({ project, onBack, onUpdate }: ProjectDetailProps)
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left: Project info */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold text-foreground">{project.title}</h1>
-              <div className="flex gap-2">
-                <Badge variant="outline">{project.category}</Badge>
-                <Badge variant="outline">{project.type}</Badge>
-              </div>
-              {project.description && (
-                <p className="text-muted-foreground leading-relaxed">{project.description}</p>
-              )}
-            </div>
+            {isEditing ? (
+              <Card className="p-4 space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Title</p>
+                    <Input
+                      value={editableProject.title}
+                      onChange={(e) =>
+                        setEditableProject((prev) => ({ ...prev, title: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Type</p>
+                    <Select
+                      value={editableProject.type}
+                      onValueChange={(value: Project['type']) =>
+                        setEditableProject((prev) => ({ ...prev, type: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="web">Web</SelectItem>
+                        <SelectItem value="mobile">Mobile</SelectItem>
+                        <SelectItem value="telegram">Telegram</SelectItem>
+                        <SelectItem value="presentation">Presentation</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Category</p>
+                    <Select
+                      value={editableProject.category}
+                      onValueChange={(value: Project['category']) =>
+                        setEditableProject((prev) => ({ ...prev, category: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="startup">Startup</SelectItem>
+                        <SelectItem value="site">Site</SelectItem>
+                        <SelectItem value="app">App</SelectItem>
+                        <SelectItem value="bot">Bot</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">GitHub URL</p>
+                    <Input
+                      value={editableProject.githubUrl}
+                      onChange={(e) =>
+                        setEditableProject((prev) => ({ ...prev, githubUrl: e.target.value }))
+                      }
+                      placeholder="https://github.com/..."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Live URL</p>
+                    <Input
+                      value={editableProject.liveUrl}
+                      onChange={(e) =>
+                        setEditableProject((prev) => ({ ...prev, liveUrl: e.target.value }))
+                      }
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Local Path</p>
+                    <Input
+                      value={editableProject.localPath}
+                      onChange={(e) =>
+                        setEditableProject((prev) => ({ ...prev, localPath: e.target.value }))
+                      }
+                      placeholder="/Users/me/dev/project-name"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Description</p>
+                    <Input
+                      value={editableProject.description}
+                      onChange={(e) =>
+                        setEditableProject((prev) => ({ ...prev, description: e.target.value }))
+                      }
+                      placeholder="What's this project about?"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium text-muted-foreground">Screenshots</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => openImagePicker('add')}
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Add
+                      </Button>
+                    </div>
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple={replaceImageIndex === null}
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                    {editableProject.images.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {editableProject.images.map((image, index) => (
+                          <div key={`${image.slice(0, 24)}-${index}`} className="group relative overflow-hidden rounded-md border border-border bg-secondary/30">
+                            <img src={image} alt="" className="h-20 w-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => openImagePicker('replace', index)}
+                              >
+                                Replace
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => handleDeleteImage(index)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No screenshots attached</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveProject} className="gap-2">
+                    <Save className="h-4 w-4" />
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditableProject(getEditableProjectFields(project));
+                      setIsEditing(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-3">
+                      <h1 className="text-3xl font-semibold text-foreground">{project.title}</h1>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">{project.category}</Badge>
+                        <Badge variant="outline">{project.type}</Badge>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsEditing(true)}>
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </Button>
+                  </div>
+                  {project.description && (
+                    <p className="text-muted-foreground leading-relaxed">{project.description}</p>
+                  )}
+                </div>
 
-            <div className="flex gap-2">
-              {project.githubUrl && (
-                <Button
-                  variant="outline"
-                  onClick={() => window.open(project.githubUrl, '_blank')}
-                  className="gap-2"
-                >
-                  <Github className="h-4 w-4" />
-                  GitHub
-                </Button>
-              )}
-              {project.liveUrl && (
-                <Button
-                  variant="outline"
-                  onClick={() => window.open(project.liveUrl, '_blank')}
-                  className="gap-2"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Live Site
-                </Button>
-              )}
-            </div>
+                <div className="flex gap-2">
+                  {project.githubUrl && (
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open(project.githubUrl, '_blank')}
+                      className="gap-2"
+                    >
+                      <Github className="h-4 w-4" />
+                      GitHub
+                    </Button>
+                  )}
+                  {project.liveUrl && (
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open(project.liveUrl, '_blank')}
+                      className="gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Live Site
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right: Cards */}
