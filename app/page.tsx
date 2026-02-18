@@ -1,0 +1,187 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { useProjects } from '@/hooks/use-projects';
+import { Header } from '@/components/header';
+import { ProjectCard } from '@/components/project-card';
+import { AddProjectDialog } from '@/components/add-project-dialog';
+import { ProjectDetail } from '@/components/project-detail';
+import { Project, ProjectType } from '@/lib/types';
+import { FileCode2 } from 'lucide-react';
+import { Toaster } from '@/components/ui/sonner';
+
+export default function HomePage() {
+  const { projects, addProject, updateProject, mounted } = useProjects();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<ProjectType | 'all'>('all');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        setShowAddDialog(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Filter projects
+  const filteredProjects = useMemo(() => {
+    let result = projects;
+
+    // Filter by type
+    if (activeFilter !== 'all') {
+      result = result.filter((p) => p.type === activeFilter);
+    }
+
+    // Search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.title.toLowerCase().includes(query) ||
+          p.localPath.toLowerCase().includes(query) ||
+          p.description.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [projects, activeFilter, searchQuery]);
+
+  // Split by sections
+  const webProjects = filteredProjects.filter(
+    (p) => p.type === 'web' || p.type === 'presentation'
+  );
+  const mobileProjects = filteredProjects.filter(
+    (p) => p.type === 'mobile' || p.type === 'telegram'
+  );
+
+  // Show project detail if selected
+  if (selectedProject) {
+    return (
+      <>
+        <ProjectDetail
+          project={selectedProject}
+          onBack={() => setSelectedProject(null)}
+          onUpdate={updateProject}
+        />
+        <Toaster position="bottom-right" />
+      </>
+    );
+  }
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="min-h-screen bg-background">
+        <Header
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          onAddProject={() => setShowAddDialog(true)}
+        />
+
+        <main className="container mx-auto px-6 py-12 space-y-16">
+          {/* Web & Presentations Section */}
+          {(activeFilter === 'all' || activeFilter === 'web' || activeFilter === 'presentation') && (
+            <section className="space-y-6">
+              <h2 className="text-xl font-semibold text-foreground">
+                Web & Presentations
+              </h2>
+              {webProjects.length > 0 ? (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {webProjects.map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      onClick={() => setSelectedProject(project)}
+                      aspectRatio="video"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary/20 py-16">
+                  <FileCode2 className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                  <p className="text-muted-foreground">
+                    {searchQuery ? 'No matching projects' : 'No web projects yet'}
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Mobile & Telegram Section */}
+          {(activeFilter === 'all' || activeFilter === 'mobile' || activeFilter === 'telegram') && (
+            <section className="space-y-6">
+              <h2 className="text-xl font-semibold text-foreground">
+                Mobile & Telegram
+              </h2>
+              {mobileProjects.length > 0 ? (
+                <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {mobileProjects.map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      onClick={() => setSelectedProject(project)}
+                      aspectRatio="portrait"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary/20 py-16">
+                  <FileCode2 className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                  <p className="text-muted-foreground">
+                    {searchQuery ? 'No matching projects' : 'No mobile projects yet'}
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Global empty state */}
+          {filteredProjects.length === 0 && !searchQuery && (
+            <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
+              <div className="rounded-full bg-secondary/60 p-6">
+                <FileCode2 className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold text-foreground">
+                  No projects yet
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Add your first project to get started →
+                </p>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      <AddProjectDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onAdd={addProject}
+      />
+
+      <Toaster position="bottom-right" />
+    </>
+  );
+}
