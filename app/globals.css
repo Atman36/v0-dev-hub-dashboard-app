@@ -4,30 +4,82 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* DevHub - Dark only theme (Vercel × Linear × Raycast aesthetic) */
-  --background: oklch(0.09 0 0); /* Pure near-black */
-  --foreground: oklch(0.97 0 0); /* Near-white text */
-  --card: oklch(0.12 0 0); /* Subtle card elevation */
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.11 0 0);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.97 0 0); /* White primary */
-  --primary-foreground: oklch(0.09 0 0);
-  --secondary: oklch(0.18 0 0); /* Subtle gray */
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.18 0 0);
-  --muted-foreground: oklch(0.55 0 0); /* Medium gray text */
-  --accent: oklch(0.6 0.18 250); /* Surgical blue accent */
-  --accent-foreground: oklch(0.97 0 0);
-  --destructive: oklch(0.55 0.22 25); /* Red for destructive */
-  --destructive-foreground: oklch(0.97 0 0);
-  --border: oklch(0.22 0 0); /* Subtle borders */
-  --input: oklch(0.18 0 0);
-  --ring: oklch(0.6 0.18 250); /* Blue ring */
-  --success: oklch(0.65 0.18 145); /* Green for success */
-  --warning: oklch(0.7 0.15 85); /* Amber for warning */
-  --info: oklch(0.6 0.15 235); /* Blue for info */
-  --radius: 0.5rem; /* Tighter radius for precision */
+  --background: hsl(0 0% 99%);
+  --foreground: hsl(220 14% 10%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(220 14% 10%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(220 14% 10%);
+  --primary: hsl(220 14% 10%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(220 14% 96%);
+  --secondary-foreground: hsl(220 14% 10%);
+  --muted: hsl(220 14% 96%);
+  --muted-foreground: hsl(220 9% 46%);
+  --accent: hsl(220 14% 93%);
+  --accent-foreground: hsl(220 14% 10%);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(220 13% 91%);
+  --input: hsl(220 13% 91%);
+  --ring: hsl(220 14% 10%);
+  --chart-1: hsl(199 89% 48%);
+  --chart-2: hsl(160 60% 45%);
+  --chart-3: hsl(30 80% 55%);
+  --chart-4: hsl(280 65% 60%);
+  --chart-5: hsl(340 75% 55%);
+  --radius: 0.625rem;
+  --success: hsl(142 71% 45%);
+  --warning: hsl(38 92% 50%);
+  --info: hsl(199 89% 48%);
+  --sidebar: hsl(220 14% 97%);
+  --sidebar-foreground: hsl(220 14% 10%);
+  --sidebar-primary: hsl(220 14% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(220 14% 93%);
+  --sidebar-accent-foreground: hsl(220 14% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(199 89% 48%);
+  --surface-pattern-dot: rgba(15, 23, 42, 0.08);
+}
+
+.dark {
+  --background: hsl(224 14% 7%);
+  --foreground: hsl(210 20% 96%);
+  --card: hsl(224 14% 9%);
+  --card-foreground: hsl(210 20% 96%);
+  --popover: hsl(224 14% 9%);
+  --popover-foreground: hsl(210 20% 96%);
+  --primary: hsl(210 20% 96%);
+  --primary-foreground: hsl(224 14% 7%);
+  --secondary: hsl(224 14% 14%);
+  --secondary-foreground: hsl(210 20% 96%);
+  --muted: hsl(224 14% 14%);
+  --muted-foreground: hsl(218 11% 55%);
+  --accent: hsl(224 14% 14%);
+  --accent-foreground: hsl(210 20% 96%);
+  --destructive: hsl(0 62% 50%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(224 14% 16%);
+  --input: hsl(224 14% 16%);
+  --ring: hsl(210 20% 96%);
+  --chart-1: hsl(199 89% 48%);
+  --chart-2: hsl(160 60% 45%);
+  --chart-3: hsl(30 80% 55%);
+  --chart-4: hsl(280 65% 60%);
+  --chart-5: hsl(340 75% 55%);
+  --success: hsl(142 71% 45%);
+  --warning: hsl(38 92% 50%);
+  --info: hsl(199 89% 60%);
+  --sidebar: hsl(224 14% 9%);
+  --sidebar-foreground: hsl(210 20% 96%);
+  --sidebar-primary: hsl(199 89% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(224 14% 14%);
+  --sidebar-accent-foreground: hsl(210 20% 96%);
+  --sidebar-border: hsl(224 14% 16%);
+  --sidebar-ring: hsl(199 89% 48%);
+  --surface-pattern-dot: rgba(255, 255, 255, 0.08);
 }
 
 @theme inline {
@@ -52,6 +104,11 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
@@ -59,6 +116,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {

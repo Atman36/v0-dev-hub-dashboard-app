@@ -38,7 +38,7 @@ export function ProjectCard({ project, onClick, aspectRatio = 'video' }: Project
     <Card
       className={cn(
         'group cursor-pointer overflow-hidden border-border bg-card transition-all duration-200',
-        'hover:scale-[1.01] hover:border-border/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20'
+        'hover:scale-[1.01] hover:border-border/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10'
       )}
       onClick={onClick}
     >
@@ -50,7 +50,7 @@ export function ProjectCard({ project, onClick, aspectRatio = 'video' }: Project
         )}
         style={{
           backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)',
+            'radial-gradient(circle, var(--surface-pattern-dot) 1px, transparent 1px)',
           backgroundSize: '20px 20px',
         }}
       >
