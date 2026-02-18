@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -28,8 +29,11 @@ import {
   Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { generateId } from '@/lib/storage';
+import { generateId, StorageWriteResult } from '@/lib/storage';
+import { processImageFile } from '@/lib/image-processing';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type EditableProjectFields = Pick<
   Project,
@@ -45,13 +49,14 @@ function getEditableProjectFields(project: Project): EditableProjectFields {
     liveUrl: project.liveUrl,
     localPath: project.localPath,
     description: project.description,
+    images: [...project.images],
   };
 }
 
 interface ProjectDetailProps {
   project: Project;
   onBack: () => void;
-  onUpdate: (id: string, updates: Partial<Project>) => void;
+  onUpdate: (id: string, updates: Partial<Project>) => StorageWriteResult;
   startInEditMode?: boolean;
 }
 
@@ -89,29 +94,31 @@ export function ProjectDetail({
     isEditing,
   ]);
 
-  const readImageFile = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result;
-        if (typeof result === 'string') {
-          resolve(result);
-          return;
-        }
-        reject(new Error('Invalid image data'));
-      };
-      reader.onerror = () => reject(reader.error ?? new Error('Failed to read image'));
-      reader.readAsDataURL(file);
-    });
+  const withUpdate = (updates: Partial<Project>): boolean => {
+    const result = onUpdate(project.id, updates);
+    return result.ok;
+  };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files;
     if (!fileList || fileList.length === 0) return;
+    const selectedFiles = Array.from(fileList);
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      toast.error('Please upload image files only');
+      event.target.value = '';
+      return;
+    }
+
+    if (imageFiles.length < selectedFiles.length) {
+      toast.error('Some files were skipped (unsupported type)');
+    }
 
     try {
       if (replaceImageIndex !== null) {
-        const file = fileList[0];
-        const base64Image = await readImageFile(file);
+        const file = imageFiles[0];
+        const base64Image = await processImageFile(file);
         setEditableProject((prev) => {
           const images = [...prev.images];
           images[replaceImageIndex] = base64Image;
@@ -119,13 +126,27 @@ export function ProjectDetail({
         });
         toast.success('Screenshot replaced');
       } else {
-        const files = Array.from(fileList);
-        const newImages = await Promise.all(files.map((file) => readImageFile(file)));
+        const results = await Promise.allSettled(imageFiles.map((file) => processImageFile(file)));
+        const newImages = results
+          .filter(
+            (result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled'
+          )
+          .map((result) => result.value);
+        const failedCount = results.length - newImages.length;
+
+        if (newImages.length === 0) {
+          toast.error('Failed to process image');
+          return;
+        }
+
         setEditableProject((prev) => ({
           ...prev,
           images: [...prev.images, ...newImages],
         }));
         toast.success(`Added ${newImages.length} screenshot${newImages.length === 1 ? '' : 's'}`);
+        if (failedCount > 0) {
+          toast.error(`Failed to process ${failedCount} image${failedCount === 1 ? '' : 's'}`);
+        }
       }
     } catch {
       toast.error('Failed to process image');
@@ -165,13 +186,15 @@ export function ProjectDetail({
   };
 
   const handleStatusChange = (status: ProjectStatus) => {
-    onUpdate(project.id, { status });
-    toast.success('Status updated');
+    if (withUpdate({ status })) {
+      toast.success('Status updated');
+    }
   };
 
   const handleMarkReviewed = () => {
-    onUpdate(project.id, { lastReviewDate: new Date().toISOString() });
-    toast.success('Marked as reviewed today');
+    if (withUpdate({ lastReviewDate: new Date().toISOString() })) {
+      toast.success('Marked as reviewed today');
+    }
   };
 
   const handleAddTask = () => {
@@ -183,8 +206,9 @@ export function ProjectDetail({
       text: taskText,
       isDone: false,
     };
-    onUpdate(project.id, { tasks: [...project.tasks, newTask] });
-    setNewTaskText('');
+    if (withUpdate({ tasks: [...project.tasks, newTask] })) {
+      setNewTaskText('');
+    }
   };
 
   const handleSaveProject = () => {
@@ -200,22 +224,23 @@ export function ProjectDetail({
       description: editableProject.description.trim(),
     };
 
-    onUpdate(project.id, updates);
-    setEditableProject(updates);
-    setIsEditing(false);
-    toast.success('Project updated');
+    if (withUpdate(updates)) {
+      setEditableProject(updates);
+      setIsEditing(false);
+      toast.success('Project updated');
+    }
   };
 
   const handleToggleTask = (taskId: string) => {
     const updatedTasks = project.tasks.map((task) =>
       task.id === taskId ? { ...task, isDone: !task.isDone } : task
     );
-    onUpdate(project.id, { tasks: updatedTasks });
+    withUpdate({ tasks: updatedTasks });
   };
 
   const handleDeleteTask = (taskId: string) => {
     const updatedTasks = project.tasks.filter((task) => task.id !== taskId);
-    onUpdate(project.id, { tasks: updatedTasks });
+    withUpdate({ tasks: updatedTasks });
   };
 
   const activeTasks = project.tasks.filter((t) => !t.isDone);
@@ -355,12 +380,13 @@ export function ProjectDetail({
                   </div>
                   <div className="sm:col-span-2 space-y-1.5">
                     <p className="text-xs font-medium text-muted-foreground">Description</p>
-                    <Input
+                    <Textarea
                       value={editableProject.description}
                       onChange={(e) =>
                         setEditableProject((prev) => ({ ...prev, description: e.target.value }))
                       }
                       placeholder="What's this project about?"
+                      rows={5}
                     />
                   </div>
                   <div className="sm:col-span-2 space-y-2">
@@ -451,7 +477,39 @@ export function ProjectDetail({
                     </Button>
                   </div>
                   {project.description && (
-                    <p className="text-muted-foreground leading-relaxed">{project.description}</p>
+                    <div className="space-y-3 text-muted-foreground leading-relaxed">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          a: ({ ...props }) => (
+                            <a
+                              {...props}
+                              className="text-foreground underline underline-offset-2"
+                              target="_blank"
+                              rel="noreferrer"
+                            />
+                          ),
+                          table: ({ ...props }) => (
+                            <div className="overflow-x-auto rounded-md border border-border">
+                              <table {...props} className="min-w-full border-collapse text-sm" />
+                            </div>
+                          ),
+                          th: ({ ...props }) => (
+                            <th
+                              {...props}
+                              className="border-b border-border bg-secondary/50 px-3 py-2 text-left font-medium text-foreground"
+                            />
+                          ),
+                          td: ({ ...props }) => (
+                            <td {...props} className="border-b border-border px-3 py-2 align-top" />
+                          ),
+                          ul: ({ ...props }) => <ul {...props} className="list-disc pl-5" />,
+                          ol: ({ ...props }) => <ol {...props} className="list-decimal pl-5" />,
+                        }}
+                      >
+                        {project.description}
+                      </ReactMarkdown>
+                    </div>
                   )}
                 </div>
 

@@ -5,38 +5,19 @@ const STORAGE_KEY = 'devhub_projects';
 
 type ImportMode = 'replace' | 'merge';
 
+export type StorageWriteResult =
+  | { ok: true }
+  | { ok: false; code: 'quota_exceeded' | 'storage_error'; message: string };
+
 function isQuotaExceededError(error: unknown): boolean {
   if (!(error instanceof DOMException)) return false;
   return error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED';
 }
 
-function dropLargestImage(projects: Project[]): boolean {
-  let largestProjectIndex = -1;
-  let largestImageIndex = -1;
-  let largestImageSize = 0;
-
-  projects.forEach((project, projectIndex) => {
-    project.images.forEach((image, imageIndex) => {
-      if (image.length > largestImageSize) {
-        largestImageSize = image.length;
-        largestProjectIndex = projectIndex;
-        largestImageIndex = imageIndex;
-      }
-    });
-  });
-
-  if (largestProjectIndex === -1 || largestImageIndex === -1) return false;
-
-  const targetProject = projects[largestProjectIndex];
-  projects[largestProjectIndex] = {
-    ...targetProject,
-    images: targetProject.images.filter((_, index) => index !== largestImageIndex),
-  };
-
-  return true;
-}
-
 export interface ImportProjectsResult {
+  ok: boolean;
+  code?: 'quota_exceeded' | 'storage_error';
+  message?: string;
   imported: number;
   skipped: number;
   total: number;
@@ -55,61 +36,51 @@ export const storage = {
     }
   },
 
-  saveProjects(projects: Project[]): void {
-    if (typeof window === 'undefined') return;
+  saveProjects(projects: Project[]): StorageWriteResult {
+    if (typeof window === 'undefined') {
+      return { ok: false, code: 'storage_error', message: 'Storage is unavailable on the server.' };
+    }
     const payload = JSON.stringify(projects);
 
     try {
       localStorage.setItem(STORAGE_KEY, payload);
+      return { ok: true };
     } catch (error) {
       if (isQuotaExceededError(error)) {
-        const reducedProjects = projects.map((project) => ({
-          ...project,
-          images: [...project.images],
-        }));
-
-        let removedImages = 0;
-        while (dropLargestImage(reducedProjects)) {
-          removedImages += 1;
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(reducedProjects));
-            console.warn(
-              `[v0] Storage quota exceeded, removed ${removedImages} screenshot(s) to save projects.`
-            );
-            return;
-          } catch (fallbackError) {
-            if (!isQuotaExceededError(fallbackError)) {
-              console.error('[v0] Failed to save projects:', fallbackError);
-              return;
-            }
-          }
-        }
-
-        console.error('[v0] Failed to save projects: storage quota exceeded and no screenshots left to remove.');
-        return;
+        return {
+          ok: false,
+          code: 'quota_exceeded',
+          message: 'Storage full, compress/remove screenshots.',
+        };
       }
-      console.error('[v0] Failed to save projects:', error);
+
+      return {
+        ok: false,
+        code: 'storage_error',
+        message: 'Failed to save projects to local storage.',
+      };
     }
   },
 
-  addProject(project: Project): void {
+  addProject(project: Project): StorageWriteResult {
     const projects = this.getProjects();
     projects.push(project);
-    this.saveProjects(projects);
+    return this.saveProjects(projects);
   },
 
-  updateProject(id: string, updates: Partial<Project>): void {
+  updateProject(id: string, updates: Partial<Project>): StorageWriteResult {
     const projects = this.getProjects();
     const index = projects.findIndex((p) => p.id === id);
     if (index !== -1) {
       projects[index] = { ...projects[index], ...updates };
-      this.saveProjects(projects);
+      return this.saveProjects(projects);
     }
+    return { ok: false, code: 'storage_error', message: 'Project not found.' };
   },
 
-  deleteProject(id: string): void {
+  deleteProject(id: string): StorageWriteResult {
     const projects = this.getProjects();
-    this.saveProjects(projects.filter((p) => p.id !== id));
+    return this.saveProjects(projects.filter((p) => p.id !== id));
   },
 
   getProject(id: string): Project | undefined {
@@ -125,8 +96,9 @@ export const storage = {
     const importedPayload = parseImportedProjects(rawData);
 
     if (mode === 'replace') {
-      this.saveProjects(importedPayload.projects);
+      const writeResult = this.saveProjects(importedPayload.projects);
       return {
+        ...writeResult,
         imported: importedPayload.projects.length,
         skipped: importedPayload.skipped,
         total: importedPayload.projects.length,
@@ -139,9 +111,10 @@ export const storage = {
     importedPayload.projects.forEach((project) => byId.set(project.id, project));
 
     const mergedProjects = Array.from(byId.values());
-    this.saveProjects(mergedProjects);
+    const writeResult = this.saveProjects(mergedProjects);
 
     return {
+      ...writeResult,
       imported: importedPayload.projects.length,
       skipped: importedPayload.skipped,
       total: mergedProjects.length,

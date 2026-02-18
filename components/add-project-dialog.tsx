@@ -19,13 +19,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Project, ProjectType, ProjectCategory, ProjectStatus } from '@/lib/types';
-import { generateId } from '@/lib/storage';
+import { generateId, StorageWriteResult } from '@/lib/storage';
+import { processImageFile } from '@/lib/image-processing';
 import { Folder, Upload, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AddProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (project: Project) => void;
+  onAdd: (project: Project) => StorageWriteResult;
 }
 
 export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialogProps) {
@@ -41,20 +43,58 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
     images: [] as string[],
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+    const selectedFiles = Array.from(files);
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
-        setFormData((prev) => ({
-          ...prev,
-          images: [...prev.images, base64],
-        }));
-      };
-      reader.readAsDataURL(file);
+    if (imageFiles.length === 0) {
+      toast.error('Please upload image files only');
+      e.target.value = '';
+      return;
+    }
+
+    if (imageFiles.length < selectedFiles.length) {
+      toast.error('Some files were skipped (unsupported type)');
+    }
+
+    const processed = await Promise.allSettled(
+      imageFiles.map((file) => processImageFile(file))
+    );
+    const successfulImages = processed
+      .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+      .map((result) => result.value);
+    const failedCount = processed.length - successfulImages.length;
+
+    if (successfulImages.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...successfulImages],
+      }));
+      toast.success(
+        `Added ${successfulImages.length} screenshot${successfulImages.length === 1 ? '' : 's'}`
+      );
+    }
+
+    if (failedCount > 0) {
+      toast.error(`Failed to process ${failedCount} image${failedCount === 1 ? '' : 's'}`);
+    }
+
+    e.target.value = '';
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      type: 'web',
+      category: 'site',
+      githubUrl: '',
+      liveUrl: '',
+      localPath: '',
+      description: '',
+      status: 'idea',
+      images: [],
     });
   };
 
@@ -70,19 +110,13 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
       createdAt: new Date().toISOString(),
     };
 
-    onAdd(project);
+    const result = onAdd(project);
+    if (!result.ok) {
+      return;
+    }
+
     onOpenChange(false);
-    setFormData({
-      title: '',
-      type: 'web',
-      category: 'site',
-      githubUrl: '',
-      liveUrl: '',
-      localPath: '',
-      description: '',
-      status: 'idea',
-      images: [],
-    });
+    resetForm();
   };
 
   return (

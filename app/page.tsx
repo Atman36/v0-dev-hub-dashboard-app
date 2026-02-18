@@ -7,6 +7,7 @@ import { ProjectCard } from '@/components/project-card';
 import { AddProjectDialog } from '@/components/add-project-dialog';
 import { ProjectDetail } from '@/components/project-detail';
 import { ProjectType } from '@/lib/types';
+import { StorageWriteResult } from '@/lib/storage';
 import { FileCode2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -79,6 +80,30 @@ export default function HomePage() {
     (p) => p.type === 'mobile' || p.type === 'telegram'
   );
 
+  const showStorageWriteError = (result: StorageWriteResult, fallback: string) => {
+    if (result.ok) return;
+    if (result.code === 'quota_exceeded') {
+      toast.error('Storage full, compress/remove screenshots');
+      return;
+    }
+    toast.error(result.message || fallback);
+  };
+
+  const handleAddProject = (project: Parameters<typeof addProject>[0]) => {
+    const result = addProject(project);
+    showStorageWriteError(result, 'Failed to save project');
+    return result;
+  };
+
+  const handleUpdateProject = (
+    id: Parameters<typeof updateProject>[0],
+    updates: Parameters<typeof updateProject>[1]
+  ) => {
+    const result = updateProject(id, updates);
+    showStorageWriteError(result, 'Failed to update project');
+    return result;
+  };
+
   const handleExportProjects = () => {
     const payload = exportProjects();
     const blob = new Blob([payload], { type: 'application/json' });
@@ -95,6 +120,15 @@ export default function HomePage() {
     try {
       const rawData = await file.text();
       const result = importProjects(rawData, 'merge');
+      if (!result.ok) {
+        if (result.code === 'quota_exceeded') {
+          toast.error('Storage full, compress/remove screenshots');
+          return;
+        }
+        toast.error(result.message || 'Import failed during save');
+        return;
+      }
+
       toast.success(
         `Imported ${result.imported} project${result.imported === 1 ? '' : 's'} (${result.mode})`
       );
@@ -126,7 +160,7 @@ export default function HomePage() {
             setSelectedProjectId(null);
             setStartInEditMode(false);
           }}
-          onUpdate={updateProject}
+          onUpdate={handleUpdateProject}
           startInEditMode={startInEditMode}
         />
         <Toaster position="bottom-right" />
@@ -249,7 +283,7 @@ export default function HomePage() {
       <AddProjectDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
-        onAdd={addProject}
+        onAdd={handleAddProject}
       />
 
       <Toaster position="bottom-right" />
