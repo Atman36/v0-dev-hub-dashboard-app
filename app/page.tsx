@@ -7,7 +7,11 @@ import { ProjectCard } from '@/components/project-card';
 import { AddProjectDialog } from '@/components/add-project-dialog';
 import { ProjectDetail } from '@/components/project-detail';
 import { ProjectType } from '@/lib/types';
-import { StorageWriteResult } from '@/lib/storage';
+import {
+  estimateProjectsStorageUsageBytes,
+  LOCAL_STORAGE_SOFT_LIMIT_BYTES,
+  StorageWriteResult,
+} from '@/lib/storage';
 import { FileCode2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -26,6 +30,10 @@ export default function HomePage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [startInEditMode, setStartInEditMode] = useState(false);
+  const storageUsageBytes = useMemo(
+    () => estimateProjectsStorageUsageBytes(projects),
+    [projects]
+  );
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -188,6 +196,8 @@ export default function HomePage() {
           onAddProject={() => setShowAddDialog(true)}
           onExportProjects={handleExportProjects}
           onImportProjects={handleImportProjects}
+          storageUsageBytes={storageUsageBytes}
+          storageSoftLimitBytes={LOCAL_STORAGE_SOFT_LIMIT_BYTES}
         />
 
         <main className="container mx-auto px-6 py-12 space-y-16">

@@ -34,6 +34,7 @@ import { processImageFile } from '@/lib/image-processing';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ImageWithFallback } from '@/components/image-with-fallback';
 
 type EditableProjectFields = Pick<
   Project,
@@ -266,7 +267,7 @@ export function ProjectDetail({
         {/* Top section: Image */}
         {project.images[0] && (
           <div className="overflow-hidden rounded-lg border border-border">
-            <img
+            <ImageWithFallback
               src={project.images[0]}
               alt={project.title}
               className={cn(
@@ -275,6 +276,11 @@ export function ProjectDetail({
                   ? 'max-h-[600px]'
                   : 'max-h-[400px]'
               )}
+              fallback={
+                <div className="flex h-[240px] items-center justify-center bg-secondary/40 text-sm text-muted-foreground">
+                  Preview unavailable
+                </div>
+              }
             />
           </div>
         )}
@@ -282,11 +288,16 @@ export function ProjectDetail({
         {project.images.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-2">
             {project.images.slice(1).map((img, idx) => (
-              <img
+              <ImageWithFallback
                 key={idx}
                 src={img}
                 alt=""
                 className="h-20 w-auto rounded border border-border object-cover"
+                fallback={
+                  <div className="flex h-20 w-28 items-center justify-center rounded border border-border bg-secondary/40 text-[10px] text-muted-foreground">
+                    Unavailable
+                  </div>
+                }
               />
             ))}
           </div>
@@ -415,7 +426,16 @@ export function ProjectDetail({
                       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                         {editableProject.images.map((image, index) => (
                           <div key={`${image.slice(0, 24)}-${index}`} className="group relative overflow-hidden rounded-md border border-border bg-secondary/30">
-                            <img src={image} alt="" className="h-20 w-full object-cover" />
+                            <ImageWithFallback
+                              src={image}
+                              alt=""
+                              className="h-20 w-full object-cover"
+                              fallback={
+                                <div className="flex h-20 w-full items-center justify-center bg-secondary/60 text-[10px] text-muted-foreground">
+                                  Unavailable
+                                </div>
+                              }
+                            />
                             <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
                               <Button
                                 type="button"

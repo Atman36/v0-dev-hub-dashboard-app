@@ -2,6 +2,7 @@ import { Project } from './types';
 import { parseImportedProjects, serializeProjectsForExport } from './project-exchange';
 
 const STORAGE_KEY = 'devhub_projects';
+export const LOCAL_STORAGE_SOFT_LIMIT_BYTES = 5 * 1024 * 1024;
 
 type ImportMode = 'replace' | 'merge';
 
@@ -127,4 +128,15 @@ export const storage = {
 export function generateId(): string {
   // Simple ID generation without nanoid to avoid SSR issues
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
+function getByteSize(value: string): number {
+  if (typeof Blob !== 'undefined') {
+    return new Blob([value]).size;
+  }
+  return new TextEncoder().encode(value).length;
+}
+
+export function estimateProjectsStorageUsageBytes(projects: Project[]): number {
+  return getByteSize(JSON.stringify(projects));
 }

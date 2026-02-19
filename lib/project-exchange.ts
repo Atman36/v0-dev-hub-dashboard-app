@@ -1,11 +1,38 @@
+import { z } from 'zod';
 import { Project, ProjectCategory, ProjectStatus, ProjectType, Task } from './types';
 
 export const PROJECT_EXCHANGE_FORMAT = 'devhub.projects';
 export const PROJECT_EXCHANGE_VERSION = 1;
 
-const PROJECT_TYPES: ProjectType[] = ['web', 'mobile', 'telegram', 'presentation'];
-const PROJECT_CATEGORIES: ProjectCategory[] = ['startup', 'site', 'app', 'bot', 'other'];
-const PROJECT_STATUSES: ProjectStatus[] = ['idea', 'in-progress', 'mvp', 'live', 'archived'];
+const PROJECT_TYPES = ['web', 'mobile', 'telegram', 'presentation'] as const satisfies readonly ProjectType[];
+const PROJECT_CATEGORIES = ['startup', 'site', 'app', 'bot', 'other'] as const satisfies readonly ProjectCategory[];
+const PROJECT_STATUSES = ['idea', 'in-progress', 'mvp', 'live', 'archived'] as const satisfies readonly ProjectStatus[];
+
+const ProjectTypeSchema = z.enum(PROJECT_TYPES);
+const ProjectCategorySchema = z.enum(PROJECT_CATEGORIES);
+const ProjectStatusSchema = z.enum(PROJECT_STATUSES);
+
+const ImportedTaskSchema = z.object({
+  id: z.string().trim().min(1),
+  text: z.string().trim().min(1),
+  isDone: z.boolean(),
+});
+
+const ImportedProjectSchema = z.object({
+  id: z.string().trim().min(1).optional(),
+  title: z.string().trim().min(1),
+  type: ProjectTypeSchema.catch('web'),
+  category: ProjectCategorySchema.catch('other'),
+  images: z.array(z.string()),
+  githubUrl: z.string(),
+  liveUrl: z.string(),
+  localPath: z.string(),
+  description: z.string(),
+  status: ProjectStatusSchema.catch('idea'),
+  lastReviewDate: z.string().optional(),
+  createdAt: z.string().optional(),
+  tasks: z.array(ImportedTaskSchema),
+});
 
 export interface SupabaseProjectRow {
   id: string;
@@ -52,95 +79,102 @@ function toString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function toStringArray(value: unknown): string[] {
+function toOptionalNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function toUnknownArray(value: unknown): unknown[] {
   if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string');
+    return value;
   }
   if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed)
-        ? parsed.filter((item): item is string => typeof item === 'string')
-        : [];
-    } catch {
-      return [];
-    }
+    const parsed = parseJson(value);
+    return Array.isArray(parsed) ? parsed : [];
   }
   return [];
 }
 
-function toTasks(value: unknown): Task[] {
-  const source = Array.isArray(value)
-    ? value
-    : typeof value === 'string'
-      ? (() => {
-          try {
-            const parsed = JSON.parse(value);
-            return Array.isArray(parsed) ? parsed : [];
-          } catch {
-            return [];
-          }
-        })()
-      : [];
+function toStringArray(value: unknown): string[] {
+  return toUnknownArray(value).filter((item): item is string => typeof item === 'string');
+}
 
-  return source
-    .map((item): Task | null => {
-      if (!isRecord(item)) return null;
-      const id = toString(item.id);
-      const text = toString(item.text);
-      const isDone = typeof item.isDone === 'boolean' ? item.isDone : false;
-      if (!id || !text) return null;
-      return { id, text, isDone };
+function toTasks(value: unknown): Task[] {
+  return toUnknownArray(value)
+    .map((item) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const parsed = ImportedTaskSchema.safeParse({
+        id: item.id,
+        text: item.text,
+        isDone: typeof item.isDone === 'boolean' ? item.isDone : false,
+      });
+
+      if (!parsed.success) {
+        return null;
+      }
+
+      return parsed.data;
     })
     .filter((item): item is Task => item !== null);
-}
-
-function toProjectType(value: unknown): ProjectType {
-  return PROJECT_TYPES.includes(value as ProjectType) ? (value as ProjectType) : 'web';
-}
-
-function toProjectCategory(value: unknown): ProjectCategory {
-  return PROJECT_CATEGORIES.includes(value as ProjectCategory)
-    ? (value as ProjectCategory)
-    : 'other';
-}
-
-function toProjectStatus(value: unknown): ProjectStatus {
-  return PROJECT_STATUSES.includes(value as ProjectStatus)
-    ? (value as ProjectStatus)
-    : 'idea';
 }
 
 function generateFallbackId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
-export function normalizeToProject(candidate: unknown): Project | null {
-  if (!isRecord(candidate)) return null;
-
-  const now = new Date().toISOString();
-  const title = toString(candidate.title).trim();
-  if (!title) return null;
-
-  const createdAt = toIsoDate(candidate.createdAt ?? candidate.created_at, now);
-  const lastReviewDate = toIsoDate(
-    candidate.lastReviewDate ?? candidate.last_review_date,
-    createdAt
-  );
-
+function toProjectImportInput(candidate: Record<string, unknown>) {
   return {
-    id: toString(candidate.id) || generateFallbackId(),
-    title,
-    type: toProjectType(candidate.type),
-    category: toProjectCategory(candidate.category),
+    id: toOptionalNonEmptyString(candidate.id),
+    title: toString(candidate.title),
+    type: candidate.type,
+    category: candidate.category,
     images: toStringArray(candidate.images),
     githubUrl: toString(candidate.githubUrl ?? candidate.github_url),
     liveUrl: toString(candidate.liveUrl ?? candidate.live_url),
     localPath: toString(candidate.localPath ?? candidate.local_path),
     description: toString(candidate.description),
-    status: toProjectStatus(candidate.status),
-    lastReviewDate,
+    status: candidate.status,
+    lastReviewDate: toOptionalNonEmptyString(candidate.lastReviewDate ?? candidate.last_review_date),
+    createdAt: toOptionalNonEmptyString(candidate.createdAt ?? candidate.created_at),
     tasks: toTasks(candidate.tasks),
+  };
+}
+
+export function normalizeToProject(candidate: unknown): Project | null {
+  if (!isRecord(candidate)) return null;
+
+  const parsed = ImportedProjectSchema.safeParse(toProjectImportInput(candidate));
+  if (!parsed.success) return null;
+
+  const now = new Date().toISOString();
+  const createdAt = toIsoDate(parsed.data.createdAt, now);
+  const lastReviewDate = toIsoDate(parsed.data.lastReviewDate, createdAt);
+
+  return {
+    id: parsed.data.id || generateFallbackId(),
+    title: parsed.data.title,
+    type: parsed.data.type,
+    category: parsed.data.category,
+    images: parsed.data.images,
+    githubUrl: parsed.data.githubUrl,
+    liveUrl: parsed.data.liveUrl,
+    localPath: parsed.data.localPath,
+    description: parsed.data.description,
+    status: parsed.data.status,
+    lastReviewDate,
+    tasks: parsed.data.tasks,
     createdAt,
   };
 }

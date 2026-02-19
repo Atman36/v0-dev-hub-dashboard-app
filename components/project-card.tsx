@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { StatusBadge } from './status-badge';
 import { ExternalLink, Github, ArrowRight, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ImageWithFallback } from './image-with-fallback';
 
 interface ProjectCardProps {
   project: Project;
@@ -55,19 +56,18 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
           backgroundSize: '20px 20px',
         }}
       >
-        {project.images[0] ? (
-          <img
-            src={project.images[0]}
-            alt={project.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <span className="font-mono text-3xl font-bold text-muted-foreground/40">
-              {getInitials(project.title)}
-            </span>
-          </div>
-        )}
+        <ImageWithFallback
+          src={project.images[0]}
+          alt={project.title}
+          className="h-full w-full object-cover"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="font-mono text-3xl font-bold text-muted-foreground/40">
+                {getInitials(project.title)}
+              </span>
+            </div>
+          }
+        />
       </div>
 
       {/* Card body */}
