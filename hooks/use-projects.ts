@@ -12,10 +12,8 @@ function emitChange() {
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     setProjects(storage.getProjects());
 
     const handleChange = () => {
@@ -64,6 +62,5 @@ export function useProjects() {
     deleteProject,
     exportProjects,
     importProjects,
-    mounted,
   };
 }

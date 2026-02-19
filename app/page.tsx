@@ -23,7 +23,6 @@ export default function HomePage() {
     updateProject,
     exportProjects,
     importProjects,
-    mounted,
   } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ProjectType | 'all'>('all');
@@ -173,15 +172,6 @@ export default function HomePage() {
         />
         <Toaster position="bottom-right" />
       </>
-    );
-  }
-
-  // Prevent hydration mismatch
-  if (!mounted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-      </div>
     );
   }
 
