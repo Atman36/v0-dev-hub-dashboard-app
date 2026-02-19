@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -19,74 +21,157 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Project, ProjectType, ProjectCategory, ProjectStatus } from '@/lib/types';
-import { generateId } from '@/lib/storage';
+import { generateId, StorageWriteResult } from '@/lib/storage';
+import { processImageFile } from '@/lib/image-processing';
 import { Folder, Upload, X } from 'lucide-react';
+import { toast } from 'sonner';
+
+const PROJECT_TYPES = ['web', 'mobile', 'telegram', 'presentation'] as const satisfies readonly ProjectType[];
+const PROJECT_CATEGORIES = ['startup', 'site', 'app', 'bot', 'other'] as const satisfies readonly ProjectCategory[];
+const PROJECT_STATUSES = ['idea', 'in-progress', 'mvp', 'live', 'archived'] as const satisfies readonly ProjectStatus[];
+
+const OptionalUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => {
+      if (!value) return true;
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Please enter a valid URL' }
+  );
+
+const AddProjectSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required'),
+  type: z.enum(PROJECT_TYPES),
+  category: z.enum(PROJECT_CATEGORIES),
+  githubUrl: OptionalUrlSchema,
+  liveUrl: OptionalUrlSchema,
+  localPath: z.string().trim(),
+  description: z.string().trim(),
+  status: z.enum(PROJECT_STATUSES),
+  images: z.array(z.string()),
+});
+
+type AddProjectFormValues = z.infer<typeof AddProjectSchema>;
+
+const DEFAULT_VALUES: AddProjectFormValues = {
+  title: '',
+  type: 'web',
+  category: 'site',
+  githubUrl: '',
+  liveUrl: '',
+  localPath: '',
+  description: '',
+  status: 'idea',
+  images: [],
+};
 
 interface AddProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (project: Project) => void;
+  onAdd: (project: Project) => StorageWriteResult;
 }
 
 export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialogProps) {
-  const [formData, setFormData] = useState({
-    title: '',
-    type: 'web' as ProjectType,
-    category: 'site' as ProjectCategory,
-    githubUrl: '',
-    liveUrl: '',
-    localPath: '',
-    description: '',
-    status: 'idea' as ProjectStatus,
-    images: [] as string[],
+  const form = useForm<AddProjectFormValues>({
+    resolver: zodResolver(AddProjectSchema),
+    defaultValues: DEFAULT_VALUES,
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const images = form.watch('images');
+
+  const errors = form.formState.errors;
+
+  const closeDialog = () => {
+    onOpenChange(false);
+    form.reset(DEFAULT_VALUES);
+  };
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+    if (!nextOpen) {
+      form.reset(DEFAULT_VALUES);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
-        setFormData((prev) => ({
-          ...prev,
-          images: [...prev.images, base64],
-        }));
-      };
-      reader.readAsDataURL(file);
+    const selectedFiles = Array.from(files);
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      toast.error('Please upload image files only');
+      e.target.value = '';
+      return;
+    }
+
+    if (imageFiles.length < selectedFiles.length) {
+      toast.error('Some files were skipped (unsupported type)');
+    }
+
+    const processed = await Promise.allSettled(imageFiles.map((file) => processImageFile(file)));
+
+    const successfulImages = processed
+      .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+      .map((result) => result.value);
+
+    const failedCount = processed.length - successfulImages.length;
+
+    if (successfulImages.length > 0) {
+      const nextImages = [...form.getValues('images'), ...successfulImages];
+      form.setValue('images', nextImages, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      toast.success(
+        `Added ${successfulImages.length} screenshot${successfulImages.length === 1 ? '' : 's'}`
+      );
+    }
+
+    if (failedCount > 0) {
+      toast.error(`Failed to process ${failedCount} image${failedCount === 1 ? '' : 's'}`);
+    }
+
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const nextImages = form.getValues('images').filter((_, i) => i !== index);
+    form.setValue('images', nextImages, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.title) return;
-
+  const handleSubmit = form.handleSubmit((values) => {
     const project: Project = {
       id: generateId(),
-      ...formData,
+      ...values,
       lastReviewDate: new Date().toISOString(),
       tasks: [],
       createdAt: new Date().toISOString(),
     };
 
-    onAdd(project);
-    onOpenChange(false);
-    setFormData({
-      title: '',
-      type: 'web',
-      category: 'site',
-      githubUrl: '',
-      liveUrl: '',
-      localPath: '',
-      description: '',
-      status: 'idea',
-      images: [],
-    });
-  };
+    const result = onAdd(project);
+    if (!result.ok) {
+      return;
+    }
+
+    closeDialog();
+  });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Project</DialogTitle>
@@ -94,143 +179,131 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            {/* Title */}
             <div className="col-span-2 space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, title: e.target.value }))
-                }
+                {...form.register('title')}
                 placeholder="My Awesome Project"
                 required
               />
+              {errors.title && (
+                <p className="text-sm text-destructive">{errors.title.message}</p>
+              )}
             </div>
 
-            {/* Type */}
             <div className="space-y-2">
               <Label>Type</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value: ProjectType) =>
-                  setFormData((prev) => ({ ...prev, type: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="web">Web</SelectItem>
-                  <SelectItem value="mobile">Mobile</SelectItem>
-                  <SelectItem value="telegram">Telegram</SelectItem>
-                  <SelectItem value="presentation">Presentation</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="web">Web</SelectItem>
+                      <SelectItem value="mobile">Mobile</SelectItem>
+                      <SelectItem value="telegram">Telegram</SelectItem>
+                      <SelectItem value="presentation">Presentation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
-            {/* Category */}
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value: ProjectCategory) =>
-                  setFormData((prev) => ({ ...prev, category: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="startup">Startup</SelectItem>
-                  <SelectItem value="site">Site</SelectItem>
-                  <SelectItem value="app">App</SelectItem>
-                  <SelectItem value="bot">Bot</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="startup">Startup</SelectItem>
+                      <SelectItem value="site">Site</SelectItem>
+                      <SelectItem value="app">App</SelectItem>
+                      <SelectItem value="bot">Bot</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
-            {/* GitHub URL */}
             <div className="space-y-2">
               <Label htmlFor="githubUrl">GitHub URL</Label>
               <Input
                 id="githubUrl"
-                value={formData.githubUrl}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, githubUrl: e.target.value }))
-                }
+                {...form.register('githubUrl')}
                 placeholder="https://github.com/..."
               />
+              {errors.githubUrl && (
+                <p className="text-sm text-destructive">{errors.githubUrl.message}</p>
+              )}
             </div>
 
-            {/* Live URL */}
             <div className="space-y-2">
               <Label htmlFor="liveUrl">Live URL</Label>
               <Input
                 id="liveUrl"
-                value={formData.liveUrl}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, liveUrl: e.target.value }))
-                }
+                {...form.register('liveUrl')}
                 placeholder="https://..."
               />
+              {errors.liveUrl && (
+                <p className="text-sm text-destructive">{errors.liveUrl.message}</p>
+              )}
             </div>
 
-            {/* Local Path */}
             <div className="col-span-2 space-y-2">
               <Label htmlFor="localPath">Local Path</Label>
               <div className="relative">
                 <Folder className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="localPath"
-                  value={formData.localPath}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, localPath: e.target.value }))
-                  }
+                  {...form.register('localPath')}
                   placeholder="/Users/me/dev/project-name"
                   className="pl-9 font-mono text-sm"
                 />
               </div>
             </div>
 
-            {/* Status */}
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: ProjectStatus) =>
-                  setFormData((prev) => ({ ...prev, status: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="idea">Idea</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="mvp">MVP</SelectItem>
-                  <SelectItem value="live">Live</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="idea">Idea</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="mvp">MVP</SelectItem>
+                      <SelectItem value="live">Live</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
-            {/* Description */}
             <div className="col-span-2 space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, description: e.target.value }))
-                }
+                {...form.register('description')}
                 placeholder="What's this project about?"
                 rows={3}
               />
             </div>
 
-            {/* Image upload */}
             <div className="col-span-2 space-y-2">
               <Label>Screenshots</Label>
               <div className="space-y-3">
@@ -248,19 +321,14 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                   />
                 </label>
 
-                {formData.images.length > 0 && (
+                {images.length > 0 && (
                   <div className="grid grid-cols-4 gap-2">
-                    {formData.images.map((img, idx) => (
-                      <div key={idx} className="group relative aspect-video overflow-hidden rounded-md border border-border">
+                    {images.map((img, idx) => (
+                      <div key={`${img.slice(0, 24)}-${idx}`} className="group relative aspect-video overflow-hidden rounded-md border border-border">
                         <img src={img} alt="" className="h-full w-full object-cover" />
                         <button
                           type="button"
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              images: prev.images.filter((_, i) => i !== idx),
-                            }))
-                          }
+                          onClick={() => handleRemoveImage(idx)}
                           className="absolute right-1 top-1 rounded-sm bg-destructive/90 p-1 opacity-0 transition-opacity group-hover:opacity-100"
                         >
                           <X className="h-3 w-3 text-destructive-foreground" />
@@ -273,16 +341,13 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={closeDialog}>
               Cancel
             </Button>
-            <Button type="submit">Create Project →</Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              Create Project →
+            </Button>
           </div>
         </form>
       </DialogContent>

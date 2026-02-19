@@ -15,6 +15,8 @@ interface HeaderProps {
   onAddProject: () => void;
   onExportProjects: () => void;
   onImportProjects: (file: File) => void;
+  storageUsageBytes: number;
+  storageSoftLimitBytes: number;
 }
 
 const filters: Array<{ value: ProjectType | 'all'; label: string }> = [
@@ -32,8 +34,17 @@ export function Header({
   onAddProject,
   onExportProjects,
   onImportProjects,
+  storageUsageBytes,
+  storageSoftLimitBytes,
 }: HeaderProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
+  const usagePercent = Math.min(100, Math.round((storageUsageBytes / storageSoftLimitBytes) * 100));
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -80,6 +91,10 @@ export function Header({
 
           {/* Add button */}
           <div className="flex items-center gap-2">
+            <span className="hidden text-xs text-muted-foreground tabular-nums xl:inline">
+              Storage {formatBytes(storageUsageBytes)} / ~{formatBytes(storageSoftLimitBytes)} (
+              {usagePercent}%)
+            </span>
             <input
               ref={importInputRef}
               type="file"

@@ -5,16 +5,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from './status-badge';
-import { ExternalLink, Github, ArrowRight } from 'lucide-react';
+import { ExternalLink, Github, ArrowRight, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ImageWithFallback } from './image-with-fallback';
 
 interface ProjectCardProps {
   project: Project;
   onClick: () => void;
+  onEdit?: () => void;
   aspectRatio?: 'video' | 'portrait';
 }
 
-export function ProjectCard({ project, onClick, aspectRatio = 'video' }: ProjectCardProps) {
+export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {
   const handleGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (project.githubUrl) window.open(project.githubUrl, '_blank');
@@ -54,19 +56,18 @@ export function ProjectCard({ project, onClick, aspectRatio = 'video' }: Project
           backgroundSize: '20px 20px',
         }}
       >
-        {project.images[0] ? (
-          <img
-            src={project.images[0]}
-            alt={project.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <span className="font-mono text-3xl font-bold text-muted-foreground/40">
-              {getInitials(project.title)}
-            </span>
-          </div>
-        )}
+        <ImageWithFallback
+          src={project.images[0]}
+          alt={project.title}
+          className="h-full w-full object-cover"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="font-mono text-3xl font-bold text-muted-foreground/40">
+                {getInitials(project.title)}
+              </span>
+            </div>
+          }
+        />
       </div>
 
       {/* Card body */}
@@ -92,6 +93,7 @@ export function ProjectCard({ project, onClick, aspectRatio = 'video' }: Project
               size="sm"
               onClick={handleGitHub}
               className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              aria-label="View GitHub repository"
             >
               <Github className="h-4 w-4" />
             </Button>
@@ -102,14 +104,30 @@ export function ProjectCard({ project, onClick, aspectRatio = 'video' }: Project
               size="sm"
               onClick={handleLive}
               className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              aria-label="Open live site"
             >
               <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              aria-label="Edit project"
+            >
+              <Pencil className="h-4 w-4" />
             </Button>
           )}
           <Button
             variant="ghost"
             size="sm"
             className="ml-auto h-8 px-2 text-muted-foreground hover:text-foreground"
+            aria-label="View project details"
           >
             <ArrowRight className="h-4 w-4" />
           </Button>

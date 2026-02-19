@@ -6,7 +6,12 @@ import { Header } from '@/components/header';
 import { ProjectCard } from '@/components/project-card';
 import { AddProjectDialog } from '@/components/add-project-dialog';
 import { ProjectDetail } from '@/components/project-detail';
-import { Project, ProjectType } from '@/lib/types';
+import { ProjectType } from '@/lib/types';
+import {
+  estimateProjectsStorageUsageBytes,
+  LOCAL_STORAGE_SOFT_LIMIT_BYTES,
+  StorageWriteResult,
+} from '@/lib/storage';
 import { FileCode2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -18,12 +23,21 @@ export default function HomePage() {
     updateProject,
     exportProjects,
     importProjects,
-    mounted,
   } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ProjectType | 'all'>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [startInEditMode, setStartInEditMode] = useState(false);
+  const storageUsageBytes = useMemo(
+    () => estimateProjectsStorageUsageBytes(projects),
+    [projects]
+  );
+
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.id === selectedProjectId) ?? null,
+    [projects, selectedProjectId]
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -73,6 +87,30 @@ export default function HomePage() {
     (p) => p.type === 'mobile' || p.type === 'telegram'
   );
 
+  const showStorageWriteError = (result: StorageWriteResult, fallback: string) => {
+    if (result.ok) return;
+    if (result.code === 'quota_exceeded') {
+      toast.error('Storage full, compress/remove screenshots');
+      return;
+    }
+    toast.error(result.message || fallback);
+  };
+
+  const handleAddProject = (project: Parameters<typeof addProject>[0]) => {
+    const result = addProject(project);
+    showStorageWriteError(result, 'Failed to save project');
+    return result;
+  };
+
+  const handleUpdateProject = (
+    id: Parameters<typeof updateProject>[0],
+    updates: Parameters<typeof updateProject>[1]
+  ) => {
+    const result = updateProject(id, updates);
+    showStorageWriteError(result, 'Failed to update project');
+    return result;
+  };
+
   const handleExportProjects = () => {
     const payload = exportProjects();
     const blob = new Blob([payload], { type: 'application/json' });
@@ -89,6 +127,15 @@ export default function HomePage() {
     try {
       const rawData = await file.text();
       const result = importProjects(rawData, 'merge');
+      if (!result.ok) {
+        if (result.code === 'quota_exceeded') {
+          toast.error('Storage full, compress/remove screenshots');
+          return;
+        }
+        toast.error(result.message || 'Import failed during save');
+        return;
+      }
+
       toast.success(
         `Imported ${result.imported} project${result.imported === 1 ? '' : 's'} (${result.mode})`
       );
@@ -101,26 +148,30 @@ export default function HomePage() {
     }
   };
 
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    const exists = projects.some((project) => project.id === selectedProjectId);
+    if (!exists) {
+      setSelectedProjectId(null);
+      setStartInEditMode(false);
+    }
+  }, [projects, selectedProjectId]);
+
   // Show project detail if selected
   if (selectedProject) {
     return (
       <>
         <ProjectDetail
           project={selectedProject}
-          onBack={() => setSelectedProject(null)}
-          onUpdate={updateProject}
+          onBack={() => {
+            setSelectedProjectId(null);
+            setStartInEditMode(false);
+          }}
+          onUpdate={handleUpdateProject}
+          startInEditMode={startInEditMode}
         />
         <Toaster position="bottom-right" />
       </>
-    );
-  }
-
-  // Prevent hydration mismatch
-  if (!mounted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
-      </div>
     );
   }
 
@@ -135,6 +186,8 @@ export default function HomePage() {
           onAddProject={() => setShowAddDialog(true)}
           onExportProjects={handleExportProjects}
           onImportProjects={handleImportProjects}
+          storageUsageBytes={storageUsageBytes}
+          storageSoftLimitBytes={LOCAL_STORAGE_SOFT_LIMIT_BYTES}
         />
 
         <main className="container mx-auto px-6 py-12 space-y-16">
@@ -150,7 +203,14 @@ export default function HomePage() {
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      onClick={() => setSelectedProject(project)}
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(false);
+                      }}
+                      onEdit={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(true);
+                      }}
                       aspectRatio="video"
                     />
                   ))}
@@ -178,7 +238,14 @@ export default function HomePage() {
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      onClick={() => setSelectedProject(project)}
+                      onClick={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(false);
+                      }}
+                      onEdit={() => {
+                        setSelectedProjectId(project.id);
+                        setStartInEditMode(true);
+                      }}
                       aspectRatio="portrait"
                     />
                   ))}
@@ -216,7 +283,7 @@ export default function HomePage() {
       <AddProjectDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
-        onAdd={addProject}
+        onAdd={handleAddProject}
       />
 
       <Toaster position="bottom-right" />

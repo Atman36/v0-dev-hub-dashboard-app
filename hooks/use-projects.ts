@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Project } from '@/lib/types';
-import { ImportProjectsResult, storage } from '@/lib/storage';
+import { ImportProjectsResult, StorageWriteResult, storage } from '@/lib/storage';
 
 let listeners: Array<() => void> = [];
 
@@ -12,10 +12,8 @@ function emitChange() {
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     setProjects(storage.getProjects());
 
     const handleChange = () => {
@@ -28,19 +26,22 @@ export function useProjects() {
     };
   }, []);
 
-  const addProject = (project: Project) => {
-    storage.addProject(project);
-    emitChange();
+  const addProject = (project: Project): StorageWriteResult => {
+    const result = storage.addProject(project);
+    if (result.ok) emitChange();
+    return result;
   };
 
-  const updateProject = (id: string, updates: Partial<Project>) => {
-    storage.updateProject(id, updates);
-    emitChange();
+  const updateProject = (id: string, updates: Partial<Project>): StorageWriteResult => {
+    const result = storage.updateProject(id, updates);
+    if (result.ok) emitChange();
+    return result;
   };
 
-  const deleteProject = (id: string) => {
-    storage.deleteProject(id);
-    emitChange();
+  const deleteProject = (id: string): StorageWriteResult => {
+    const result = storage.deleteProject(id);
+    if (result.ok) emitChange();
+    return result;
   };
 
   const exportProjects = () => storage.exportProjects();
@@ -50,7 +51,7 @@ export function useProjects() {
     mode: 'replace' | 'merge' = 'merge'
   ): ImportProjectsResult => {
     const result = storage.importProjects(rawData, mode);
-    emitChange();
+    if (result.ok) emitChange();
     return result;
   };
 
@@ -61,6 +62,5 @@ export function useProjects() {
     deleteProject,
     exportProjects,
     importProjects,
-    mounted,
   };
 }
