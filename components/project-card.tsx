@@ -19,12 +19,12 @@ interface ProjectCardProps {
 export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {
   const handleGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (project.githubUrl) window.open(project.githubUrl, '_blank');
+    if (project.githubUrl) window.open(project.githubUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleLive = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (project.liveUrl) window.open(project.liveUrl, '_blank');
+    if (project.liveUrl) window.open(project.liveUrl, '_blank', 'noopener,noreferrer');
   };
 
   const getInitials = (title: string) => {

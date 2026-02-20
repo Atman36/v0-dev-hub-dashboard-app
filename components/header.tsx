@@ -22,6 +22,7 @@ interface HeaderProps {
 const filters: Array<{ value: ProjectType | 'all'; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'web', label: 'Web' },
+  { value: 'presentation', label: 'Presentation' },
   { value: 'mobile', label: 'Mobile' },
   { value: 'telegram', label: 'Telegram' },
 ];

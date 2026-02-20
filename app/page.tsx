@@ -21,6 +21,7 @@ export default function HomePage() {
     projects,
     addProject,
     updateProject,
+    deleteProject,
     exportProjects,
     importProjects,
   } = useProjects();
@@ -111,6 +112,15 @@ export default function HomePage() {
     return result;
   };
 
+  const handleDeleteProject = (id: string) => {
+    const result = deleteProject(id);
+    showStorageWriteError(result, 'Failed to delete project');
+    if (!result.ok) return;
+    setSelectedProjectId(null);
+    setStartInEditMode(false);
+    toast.success('Project deleted');
+  };
+
   const handleExportProjects = () => {
     const payload = exportProjects();
     const blob = new Blob([payload], { type: 'application/json' });
@@ -119,7 +129,7 @@ export default function HomePage() {
     link.href = url;
     link.download = `devhub-projects-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
     toast.success('Projects exported');
   };
 
@@ -168,6 +178,7 @@ export default function HomePage() {
             setStartInEditMode(false);
           }}
           onUpdate={handleUpdateProject}
+          onDelete={handleDeleteProject}
           startInEditMode={startInEditMode}
         />
         <Toaster position="bottom-right" />

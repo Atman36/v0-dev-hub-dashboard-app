@@ -58,6 +58,7 @@ interface ProjectDetailProps {
   project: Project;
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<Project>) => StorageWriteResult;
+  onDelete: (id: string) => void;
   startInEditMode?: boolean;
 }
 
@@ -65,6 +66,7 @@ export function ProjectDetail({
   project,
   onBack,
   onUpdate,
+  onDelete,
   startInEditMode = false,
 }: ProjectDetailProps) {
   const [copied, setCopied] = useState(false);
@@ -242,6 +244,14 @@ export function ProjectDetail({
   const handleDeleteTask = (taskId: string) => {
     const updatedTasks = project.tasks.filter((task) => task.id !== taskId);
     withUpdate({ tasks: updatedTasks });
+  };
+
+  const handleDeleteProject = () => {
+    const confirmed = window.confirm(
+      `Delete "${project.title}"? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+    onDelete(project.id);
   };
 
   const activeTasks = project.tasks.filter((t) => !t.isDone);
@@ -506,7 +516,7 @@ export function ProjectDetail({
                               {...props}
                               className="text-foreground underline underline-offset-2"
                               target="_blank"
-                              rel="noreferrer"
+                              rel="noopener noreferrer"
                             />
                           ),
                           table: ({ ...props }) => (
@@ -537,7 +547,7 @@ export function ProjectDetail({
                   {project.githubUrl && (
                     <Button
                       variant="outline"
-                      onClick={() => window.open(project.githubUrl, '_blank')}
+                      onClick={() => window.open(project.githubUrl, '_blank', 'noopener,noreferrer')}
                       className="gap-2"
                     >
                       <Github className="h-4 w-4" />
@@ -547,7 +557,7 @@ export function ProjectDetail({
                   {project.liveUrl && (
                     <Button
                       variant="outline"
-                      onClick={() => window.open(project.liveUrl, '_blank')}
+                      onClick={() => window.open(project.liveUrl, '_blank', 'noopener,noreferrer')}
                       className="gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -633,6 +643,15 @@ export function ProjectDetail({
                   </Button>
                 </div>
               </div>
+            </Card>
+
+            <Card className="p-4 space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Danger Zone
+              </h3>
+              <Button variant="destructive" onClick={handleDeleteProject} className="w-full">
+                Delete Project
+              </Button>
             </Card>
           </div>
         </div>
