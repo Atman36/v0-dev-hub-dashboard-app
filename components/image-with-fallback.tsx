@@ -25,6 +25,7 @@ export function ImageWithFallback({
 
   return (
     <img
+      loading="lazy"
       {...props}
       src={src}
       onError={(event) => {
