@@ -1,4 +1,5 @@
 import { ProjectStatus } from '@/lib/types';
+import { PROJECT_STATUS_LABELS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface StatusBadgeProps {
@@ -8,27 +9,27 @@ interface StatusBadgeProps {
 
 const statusConfig = {
   idea: {
-    label: 'Idea',
+    label: PROJECT_STATUS_LABELS.idea,
     dotColor: 'bg-muted-foreground/60',
     textColor: 'text-muted-foreground',
   },
   'in-progress': {
-    label: 'In Progress',
+    label: PROJECT_STATUS_LABELS['in-progress'],
     dotColor: 'bg-info',
     textColor: 'text-info',
   },
   mvp: {
-    label: 'MVP',
+    label: PROJECT_STATUS_LABELS.mvp,
     dotColor: 'bg-warning',
     textColor: 'text-warning',
   },
   live: {
-    label: 'Live',
+    label: PROJECT_STATUS_LABELS.live,
     dotColor: 'bg-success',
     textColor: 'text-success',
   },
   archived: {
-    label: 'Archived',
+    label: PROJECT_STATUS_LABELS.archived,
     dotColor: 'bg-muted-foreground/30',
     textColor: 'text-muted-foreground/60',
   },

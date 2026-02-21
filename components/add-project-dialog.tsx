@@ -20,15 +20,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Project, ProjectType, ProjectCategory, ProjectStatus } from '@/lib/types';
+import { Project } from '@/lib/types';
+import {
+  PROJECT_TYPES,
+  PROJECT_CATEGORIES,
+  PROJECT_STATUSES,
+  PROJECT_TYPE_LABELS,
+  PROJECT_CATEGORY_LABELS,
+  PROJECT_STATUS_LABELS
+} from '@/lib/constants';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
 import { Folder, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
-
-const PROJECT_TYPES = ['web', 'mobile', 'telegram', 'presentation'] as const satisfies readonly ProjectType[];
-const PROJECT_CATEGORIES = ['startup', 'site', 'app', 'bot', 'other'] as const satisfies readonly ProjectCategory[];
-const PROJECT_STATUSES = ['idea', 'in-progress', 'mvp', 'live', 'archived'] as const satisfies readonly ProjectStatus[];
 
 const OptionalUrlSchema = z
   .string()
@@ -203,10 +207,11 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="web">Web</SelectItem>
-                      <SelectItem value="mobile">Mobile</SelectItem>
-                      <SelectItem value="telegram">Telegram</SelectItem>
-                      <SelectItem value="presentation">Presentation</SelectItem>
+                      {PROJECT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {PROJECT_TYPE_LABELS[type]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
@@ -224,11 +229,11 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="startup">Startup</SelectItem>
-                      <SelectItem value="site">Site</SelectItem>
-                      <SelectItem value="app">App</SelectItem>
-                      <SelectItem value="bot">Bot</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {PROJECT_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {PROJECT_CATEGORY_LABELS[cat]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
@@ -283,11 +288,11 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="idea">Idea</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="mvp">MVP</SelectItem>
-                      <SelectItem value="live">Live</SelectItem>
-                      <SelectItem value="archived">Archived</SelectItem>
+                      {PROJECT_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {PROJECT_STATUS_LABELS[status]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
