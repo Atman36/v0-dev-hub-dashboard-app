@@ -9,3 +9,9 @@ node_modules/
 .env*.local
 .DS_Store
 tsconfig.tsbuildinfo
+
+# Internal docs (not for public repo)
+.Jules/
+AUDIT.md
+PRD.md
+SUGGESTED_IMPROVEMENTS.md
