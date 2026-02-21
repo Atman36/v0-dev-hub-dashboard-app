@@ -9,3 +9,30 @@ export function cn(...inputs: ClassValue[]) {
 export function generateId(): string {
   return nanoid();
 }
+
+/**
+ * Downloads a JSON file with the given content and filename.
+ * @param content The JSON content string.
+ * @param filename The name of the file to download.
+ */
+export function downloadJsonFile(content: string, filename: string): void {
+  // Guard for server-side execution
+  if (typeof window === 'undefined') return;
+
+  const blob = new Blob([content], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = filename;
+
+  // Append to body to ensure it works in all browsers
+  document.body.appendChild(link);
+  link.click();
+
+  // Cleanup
+  document.body.removeChild(link);
+
+  // Revoke the object URL after a short delay to ensure download starts
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
