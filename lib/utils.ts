@@ -4,3 +4,8 @@ import { twMerge } from 'tailwind-merge'
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export function generateId(): string {
+  // Simple ID generation without nanoid to avoid SSR issues
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
