@@ -131,7 +131,6 @@ function toTasks(value: unknown): Task[] {
     .filter((item): item is Task => item !== null);
 }
 
-
 function toProjectImportInput(candidate: Record<string, unknown>) {
   return {
     id: toOptionalNonEmptyString(candidate.id),

@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx'
+import { nanoid } from 'nanoid'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
@@ -6,6 +7,5 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateId(): string {
-  // Simple ID generation without nanoid to avoid SSR issues
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  return nanoid();
 }
