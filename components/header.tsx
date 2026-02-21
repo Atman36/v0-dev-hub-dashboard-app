@@ -5,6 +5,7 @@ import { Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ProjectType } from '@/lib/types';
+import { PROJECT_TYPES, PROJECT_TYPE_LABELS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {
@@ -21,10 +22,10 @@ interface HeaderProps {
 
 const filters: Array<{ value: ProjectType | 'all'; label: string }> = [
   { value: 'all', label: 'All' },
-  { value: 'web', label: 'Web' },
-  { value: 'presentation', label: 'Presentation' },
-  { value: 'mobile', label: 'Mobile' },
-  { value: 'telegram', label: 'Telegram' },
+  ...PROJECT_TYPES.map((type) => ({
+    value: type,
+    label: PROJECT_TYPE_LABELS[type],
+  })),
 ];
 
 export function Header({

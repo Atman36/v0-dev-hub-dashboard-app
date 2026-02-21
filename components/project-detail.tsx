@@ -35,6 +35,14 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ImageWithFallback } from '@/components/image-with-fallback';
+import {
+  PROJECT_TYPES,
+  PROJECT_CATEGORIES,
+  PROJECT_STATUSES,
+  PROJECT_TYPE_LABELS,
+  PROJECT_CATEGORY_LABELS,
+  PROJECT_STATUS_LABELS,
+} from '@/lib/constants';
 
 type EditableProjectFields = Pick<
   Project,
@@ -341,10 +349,11 @@ export function ProjectDetail({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="web">Web</SelectItem>
-                        <SelectItem value="mobile">Mobile</SelectItem>
-                        <SelectItem value="telegram">Telegram</SelectItem>
-                        <SelectItem value="presentation">Presentation</SelectItem>
+                        {PROJECT_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {PROJECT_TYPE_LABELS[type]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -360,11 +369,11 @@ export function ProjectDetail({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="startup">Startup</SelectItem>
-                        <SelectItem value="site">Site</SelectItem>
-                        <SelectItem value="app">App</SelectItem>
-                        <SelectItem value="bot">Bot</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {PROJECT_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {PROJECT_CATEGORY_LABELS[cat]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -497,8 +506,8 @@ export function ProjectDetail({
                     <div className="space-y-3">
                       <h1 className="text-3xl font-semibold text-foreground">{project.title}</h1>
                       <div className="flex gap-2">
-                        <Badge variant="outline">{project.category}</Badge>
-                        <Badge variant="outline">{project.type}</Badge>
+                        <Badge variant="outline">{PROJECT_CATEGORY_LABELS[project.category]}</Badge>
+                        <Badge variant="outline">{PROJECT_TYPE_LABELS[project.type]}</Badge>
                       </div>
                     </div>
                     <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsEditing(true)}>
@@ -622,11 +631,11 @@ export function ProjectDetail({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="idea">Idea</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="mvp">MVP</SelectItem>
-                    <SelectItem value="live">Live</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
+                    {PROJECT_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {PROJECT_STATUS_LABELS[status]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <div className="space-y-1">

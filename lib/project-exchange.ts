@@ -1,12 +1,9 @@
 import { z } from 'zod';
 import { Project, ProjectCategory, ProjectStatus, ProjectType, Task } from './types';
+import { PROJECT_TYPES, PROJECT_CATEGORIES, PROJECT_STATUSES } from './constants';
 
 export const PROJECT_EXCHANGE_FORMAT = 'devhub.projects';
 export const PROJECT_EXCHANGE_VERSION = 1;
-
-const PROJECT_TYPES = ['web', 'mobile', 'telegram', 'presentation'] as const satisfies readonly ProjectType[];
-const PROJECT_CATEGORIES = ['startup', 'site', 'app', 'bot', 'other'] as const satisfies readonly ProjectCategory[];
-const PROJECT_STATUSES = ['idea', 'in-progress', 'mvp', 'live', 'archived'] as const satisfies readonly ProjectStatus[];
 
 const ProjectTypeSchema = z.enum(PROJECT_TYPES);
 const ProjectCategorySchema = z.enum(PROJECT_CATEGORIES);
