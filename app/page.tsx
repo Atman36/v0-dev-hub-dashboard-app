@@ -15,6 +15,7 @@ import {
 import { FileCode2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
+import { downloadJsonFile } from '@/lib/utils';
 
 export default function HomePage() {
   const {
@@ -123,13 +124,8 @@ export default function HomePage() {
 
   const handleExportProjects = () => {
     const payload = exportProjects();
-    const blob = new Blob([payload], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `devhub-projects-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    const filename = `devhub-projects-${new Date().toISOString().slice(0, 10)}.json`;
+    downloadJsonFile(payload, filename);
     toast.success('Projects exported');
   };
 
