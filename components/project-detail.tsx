@@ -268,7 +268,7 @@ export function ProjectDetail({
     <div className="min-h-screen bg-background">
       {/* Back button */}
       <div className="border-b border-border">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
           <Button
             variant="ghost"
             onClick={onBack}
@@ -280,7 +280,7 @@ export function ProjectDetail({
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8 space-y-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Top section: Image */}
         {project.images[0] && (
           <div className="overflow-hidden rounded-lg border border-border">

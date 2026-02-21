@@ -1,3 +1,5 @@
+export const STORAGE_KEY = 'devhub_projects';
+
 export const PROJECT_TYPES = ['web', 'mobile', 'telegram', 'presentation'] as const;
 export const PROJECT_CATEGORIES = ['startup', 'site', 'app', 'bot', 'other'] as const;
 export const PROJECT_STATUSES = ['idea', 'in-progress', 'mvp', 'live', 'archived'] as const;

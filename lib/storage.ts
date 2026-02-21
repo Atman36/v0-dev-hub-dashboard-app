@@ -1,7 +1,6 @@
 import { Project } from './types';
 import { parseImportedProjects, serializeProjectsForExport } from './project-exchange';
-
-const STORAGE_KEY = 'devhub_projects';
+import { STORAGE_KEY } from './constants';
 export const LOCAL_STORAGE_SOFT_LIMIT_BYTES = 5 * 1024 * 1024;
 
 type ImportMode = 'replace' | 'merge';

@@ -204,7 +204,7 @@ export default function HomePage() {
           storageSoftLimitBytes={LOCAL_STORAGE_SOFT_LIMIT_BYTES}
         />
 
-        <main className="container mx-auto px-6 py-12 space-y-16">
+        <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12 sm:space-y-16">
           {/* Web & Presentations Section */}
           {(activeFilter === 'all' || activeFilter === 'web' || activeFilter === 'presentation') && (
             <section className="space-y-6">

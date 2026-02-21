@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Project } from '@/lib/types';
 import { ImportProjectsResult, StorageWriteResult, storage } from '@/lib/storage';
+import { STORAGE_KEY } from '@/lib/constants';
 
-const STORAGE_KEY = 'devhub_projects';
 const PROJECTS_CHANGE_EVENT = 'devhub:projects-change';
 
 export function useProjects() {
