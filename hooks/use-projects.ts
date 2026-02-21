@@ -44,7 +44,7 @@ export function useProjects() {
   const addProject = (project: Project): StorageWriteResult => {
     const result = storage.addProject(project);
     if (result.ok) {
-      syncProjects();
+      // Avoid duplicate localStorage reads: this tab also listens to PROJECTS_CHANGE_EVENT.
       notifyProjectsChanged();
     }
     return result;
@@ -53,7 +53,6 @@ export function useProjects() {
   const updateProject = (id: string, updates: Partial<Project>): StorageWriteResult => {
     const result = storage.updateProject(id, updates);
     if (result.ok) {
-      syncProjects();
       notifyProjectsChanged();
     }
     return result;
@@ -62,7 +61,6 @@ export function useProjects() {
   const deleteProject = (id: string): StorageWriteResult => {
     const result = storage.deleteProject(id);
     if (result.ok) {
-      syncProjects();
       notifyProjectsChanged();
     }
     return result;
@@ -76,7 +74,6 @@ export function useProjects() {
   ): ImportProjectsResult => {
     const result = storage.importProjects(rawData, mode);
     if (result.ok) {
-      syncProjects();
       notifyProjectsChanged();
     }
     return result;
