@@ -82,13 +82,20 @@ export default function HomePage() {
   }, [projects, activeFilter, searchQuery]);
 
   // Split by sections
-  const webProjects = filteredProjects.filter(
-    (p) => p.type === 'web' || p.type === 'presentation'
-  );
-  const mobileProjects = filteredProjects.filter(
-    (p) => p.type === 'mobile' || p.type === 'telegram'
-  );
+  const { webProjects, mobileProjects } = useMemo(() => {
+    const web: typeof filteredProjects = [];
+    const mobile: typeof filteredProjects = [];
 
+    for (const p of filteredProjects) {
+      if (p.type === 'web' || p.type === 'presentation') {
+        web.push(p);
+      } else if (p.type === 'mobile' || p.type === 'telegram') {
+        mobile.push(p);
+      }
+    }
+
+    return { webProjects: web, mobileProjects: mobile };
+  }, [filteredProjects]);
   const showStorageWriteError = (result: StorageWriteResult, fallback: string) => {
     if (result.ok) return;
     if (result.code === 'quota_exceeded') {
