@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid';
 import { Project } from './types';
 import { parseImportedProjects, serializeProjectsForExport } from './project-exchange';
 
@@ -126,8 +127,7 @@ export const storage = {
 };
 
 export function generateId(): string {
-  // Simple ID generation without nanoid to avoid SSR issues
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  return nanoid();
 }
 
 function getByteSize(value: string): number {

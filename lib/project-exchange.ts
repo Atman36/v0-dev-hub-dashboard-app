@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { Project, ProjectCategory, ProjectStatus, ProjectType, Task } from './types';
 
@@ -131,7 +132,7 @@ function toTasks(value: unknown): Task[] {
 }
 
 function generateFallbackId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  return nanoid();
 }
 
 function toProjectImportInput(candidate: Record<string, unknown>) {
