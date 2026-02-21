@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,6 +32,7 @@ import {
 } from '@/lib/constants';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
+import { cn } from '@/lib/utils';
 import { Folder, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -87,6 +89,8 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
     resolver: zodResolver(AddProjectSchema),
     defaultValues: DEFAULT_VALUES,
   });
+  const [isDropActive, setIsDropActive] = useState(false);
+  const dragDepthRef = useRef(0);
 
   const images = form.watch('images');
 
@@ -104,16 +108,11 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const selectedFiles = Array.from(files);
+  const handleImageFiles = async (selectedFiles: File[]) => {
     const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
 
     if (imageFiles.length === 0) {
       toast.error('Please upload image files only');
-      e.target.value = '';
       return;
     }
 
@@ -144,8 +143,51 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
     if (failedCount > 0) {
       toast.error(`Failed to process ${failedCount} image${failedCount === 1 ? '' : 's'}`);
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    await handleImageFiles(Array.from(files));
 
     e.target.value = '';
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current += 1;
+    if (event.dataTransfer.items.length > 0) {
+      setIsDropActive(true);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDropActive(false);
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDropActive(false);
+
+    const droppedFiles = Array.from(event.dataTransfer.files ?? []);
+    if (droppedFiles.length === 0) return;
+
+    await handleImageFiles(droppedFiles);
   };
 
   const handleRemoveImage = (index: number) => {
@@ -312,7 +354,18 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
             <div className="col-span-2 space-y-2">
               <Label>Screenshots</Label>
               <div className="space-y-3">
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/40 p-8 transition-colors hover:border-border/60 hover:bg-secondary/60">
+                <label
+                  className={cn(
+                    'flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors',
+                    isDropActive
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-secondary/40 hover:border-border/60 hover:bg-secondary/60'
+                  )}
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <Upload className="h-5 w-5 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
                     Drop images or click to upload

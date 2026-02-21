@@ -84,6 +84,8 @@ export function ProjectDetail({
   );
   const [replaceImageIndex, setReplaceImageIndex] = useState<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [isDropActive, setIsDropActive] = useState(false);
+  const dragDepthRef = useRef(0);
 
   useEffect(() => {
     setIsEditing(startInEditMode);
@@ -109,15 +111,14 @@ export function ProjectDetail({
     return result.ok;
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = event.target.files;
-    if (!fileList || fileList.length === 0) return;
-    const selectedFiles = Array.from(fileList);
+  const processSelectedImageFiles = async (
+    selectedFiles: File[],
+    replaceIndex: number | null
+  ) => {
     const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
 
     if (imageFiles.length === 0) {
       toast.error('Please upload image files only');
-      event.target.value = '';
       return;
     }
 
@@ -126,12 +127,12 @@ export function ProjectDetail({
     }
 
     try {
-      if (replaceImageIndex !== null) {
+      if (replaceIndex !== null) {
         const file = imageFiles[0];
         const base64Image = await processImageFile(file);
         setEditableProject((prev) => {
           const images = [...prev.images];
-          images[replaceImageIndex] = base64Image;
+          images[replaceIndex] = base64Image;
           return { ...prev, images };
         });
         toast.success('Screenshot replaced');
@@ -160,10 +161,54 @@ export function ProjectDetail({
       }
     } catch {
       toast.error('Failed to process image');
-    } finally {
-      setReplaceImageIndex(null);
-      event.target.value = '';
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = event.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const currentReplaceIndex = replaceImageIndex;
+    await processSelectedImageFiles(Array.from(fileList), currentReplaceIndex);
+    setReplaceImageIndex(null);
+    event.target.value = '';
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current += 1;
+    if (event.dataTransfer.items.length > 0) {
+      setIsDropActive(true);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDropActive(false);
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDropActive(false);
+    setReplaceImageIndex(null);
+
+    const droppedFiles = Array.from(event.dataTransfer.files ?? []);
+    if (droppedFiles.length === 0) return;
+
+    await processSelectedImageFiles(droppedFiles, null);
   };
 
   const openImagePicker = (mode: 'add' | 'replace', index?: number) => {
@@ -431,6 +476,24 @@ export function ProjectDetail({
                         <Upload className="h-3.5 w-3.5" />
                         Add
                       </Button>
+                    </div>
+                    <div
+                      className={cn(
+                        'flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 transition-colors',
+                        isDropActive
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border bg-secondary/30 hover:border-border/60 hover:bg-secondary/50'
+                      )}
+                      onClick={() => openImagePicker('add')}
+                      onDragEnter={handleDragEnter}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        Drop images here or click to upload
+                      </span>
                     </div>
                     <input
                       ref={uploadInputRef}
