@@ -36,12 +36,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ImageWithFallback } from '@/components/image-with-fallback';
 import {
-  PROJECT_TYPES,
-  PROJECT_CATEGORIES,
-  PROJECT_STATUSES,
+  PROJECT_TYPE_OPTIONS,
+  PROJECT_CATEGORY_OPTIONS,
+  PROJECT_STATUS_OPTIONS,
   PROJECT_TYPE_LABELS,
   PROJECT_CATEGORY_LABELS,
-  PROJECT_STATUS_LABELS,
 } from '@/lib/constants';
 
 type EditableProjectFields = Pick<
@@ -349,9 +348,9 @@ export function ProjectDetail({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PROJECT_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {PROJECT_TYPE_LABELS[type]}
+                        {PROJECT_TYPE_OPTIONS.map(({ value, label }) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -369,9 +368,9 @@ export function ProjectDetail({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PROJECT_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {PROJECT_CATEGORY_LABELS[cat]}
+                        {PROJECT_CATEGORY_OPTIONS.map(({ value, label }) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -631,9 +630,9 @@ export function ProjectDetail({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROJECT_STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {PROJECT_STATUS_LABELS[status]}
+                    {PROJECT_STATUS_OPTIONS.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>

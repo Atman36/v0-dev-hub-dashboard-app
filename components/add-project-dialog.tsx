@@ -25,9 +25,9 @@ import {
   PROJECT_TYPES,
   PROJECT_CATEGORIES,
   PROJECT_STATUSES,
-  PROJECT_TYPE_LABELS,
-  PROJECT_CATEGORY_LABELS,
-  PROJECT_STATUS_LABELS
+  PROJECT_TYPE_OPTIONS,
+  PROJECT_CATEGORY_OPTIONS,
+  PROJECT_STATUS_OPTIONS,
 } from '@/lib/constants';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
@@ -207,9 +207,9 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PROJECT_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {PROJECT_TYPE_LABELS[type]}
+                      {PROJECT_TYPE_OPTIONS.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -229,9 +229,9 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PROJECT_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {PROJECT_CATEGORY_LABELS[cat]}
+                      {PROJECT_CATEGORY_OPTIONS.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -288,9 +288,9 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PROJECT_STATUSES.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {PROJECT_STATUS_LABELS[status]}
+                      {PROJECT_STATUS_OPTIONS.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
