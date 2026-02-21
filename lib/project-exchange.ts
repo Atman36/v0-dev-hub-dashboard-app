@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Project, ProjectCategory, ProjectStatus, ProjectType, Task } from './types';
+import { generateId } from './utils';
 
 export const PROJECT_EXCHANGE_FORMAT = 'devhub.projects';
 export const PROJECT_EXCHANGE_VERSION = 1;
@@ -130,9 +131,6 @@ function toTasks(value: unknown): Task[] {
     .filter((item): item is Task => item !== null);
 }
 
-function generateFallbackId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-}
 
 function toProjectImportInput(candidate: Record<string, unknown>) {
   return {
@@ -163,7 +161,7 @@ export function normalizeToProject(candidate: unknown): Project | null {
   const lastReviewDate = toIsoDate(parsed.data.lastReviewDate, createdAt);
 
   return {
-    id: parsed.data.id || generateFallbackId(),
+    id: parsed.data.id || generateId(),
     title: parsed.data.title,
     type: parsed.data.type,
     category: parsed.data.category,

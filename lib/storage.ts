@@ -125,10 +125,7 @@ export const storage = {
   },
 };
 
-export function generateId(): string {
-  // Simple ID generation without nanoid to avoid SSR issues
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-}
+export { generateId } from './utils';
 
 function getByteSize(value: string): number {
   if (typeof Blob !== 'undefined') {
