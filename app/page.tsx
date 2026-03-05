@@ -46,7 +46,15 @@ export default function HomePage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
+        const searchInput = document.getElementById(
+          window.matchMedia('(min-width: 768px)').matches
+            ? 'desktop-project-search'
+            : 'mobile-project-search'
+        );
+        if (searchInput instanceof HTMLInputElement) {
+          searchInput.focus();
+          searchInput.select();
+        }
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
         e.preventDefault();

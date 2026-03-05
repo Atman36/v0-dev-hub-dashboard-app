@@ -1,5 +1,9 @@
 import { Project } from './types';
-import { parseImportedProjects, serializeProjectsForExport } from './project-exchange';
+import {
+  normalizeToProject,
+  parseImportedProjects,
+  serializeProjectsForExport,
+} from './project-exchange';
 import { STORAGE_KEY } from './constants';
 export const LOCAL_STORAGE_SOFT_LIMIT_BYTES = 5 * 1024 * 1024;
 
@@ -25,12 +29,24 @@ export interface ImportProjectsResult {
   detectedFormat: string;
 }
 
+function parseStoredProjects(rawData: string): Project[] {
+  const parsed = JSON.parse(rawData) as unknown;
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed
+    .map((item) => normalizeToProject(item))
+    .filter((project): project is Project => project !== null);
+}
+
 export const storage = {
   getProjects(): Project[] {
     if (typeof window === 'undefined') return [];
     try {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      return data ? parseStoredProjects(data) : [];
     } catch {
       return [];
     }

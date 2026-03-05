@@ -28,7 +28,7 @@ import {
   Save,
   Upload,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
 import { toast } from 'sonner';
@@ -229,15 +229,22 @@ export function ProjectDetail({
     toast.success('Screenshot removed');
   };
 
-  const handleCopyPath = () => {
-    navigator.clipboard.writeText(project.localPath);
-    setCopied(true);
-    toast.success('Path copied to clipboard');
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyPath = async () => {
+    try {
+      await navigator.clipboard.writeText(project.localPath);
+      setCopied(true);
+      toast.success('Path copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy path');
+    }
   };
 
   const handleOpenVSCode = () => {
-    window.location.href = `vscode://file${project.localPath}`;
+    const normalizedPath = project.localPath.startsWith('/')
+      ? project.localPath
+      : `/${project.localPath}`;
+    window.location.href = `vscode://file${encodeURI(normalizedPath)}`;
   };
 
   const handleStatusChange = (status: ProjectStatus) => {
@@ -308,6 +315,10 @@ export function ProjectDetail({
 
   const activeTasks = project.tasks.filter((t) => !t.isDone);
   const doneTasks = project.tasks.filter((t) => t.isDone);
+  const displayImages = isEditing ? editableProject.images : project.images;
+  const displayType = isEditing ? editableProject.type : project.type;
+  const githubUrl = getSafeExternalUrl(project.githubUrl);
+  const liveUrl = getSafeExternalUrl(project.liveUrl);
 
   return (
     <div className="min-h-screen bg-background">
@@ -327,14 +338,14 @@ export function ProjectDetail({
 
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Top section: Image */}
-        {project.images[0] && (
+        {displayImages[0] && (
           <div className="overflow-hidden rounded-lg border border-border">
             <ImageWithFallback
-              src={project.images[0]}
+              src={displayImages[0]}
               alt={project.title}
               className={cn(
                 'w-full object-cover',
-                project.type === 'mobile' || project.type === 'telegram'
+                displayType === 'mobile' || displayType === 'telegram'
                   ? 'max-h-[600px]'
                   : 'max-h-[400px]'
               )}
@@ -347,9 +358,9 @@ export function ProjectDetail({
           </div>
         )}
 
-        {project.images.length > 1 && (
+        {displayImages.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {project.images.slice(1).map((img, idx) => (
+            {displayImages.slice(1).map((img, idx) => (
               <ImageWithFallback
                 key={idx}
                 src={img}
@@ -615,20 +626,28 @@ export function ProjectDetail({
                 </div>
 
                 <div className="flex gap-2">
-                  {project.githubUrl && (
+                  {githubUrl && (
                     <Button
                       variant="outline"
-                      onClick={() => window.open(project.githubUrl, '_blank', 'noopener,noreferrer')}
+                      onClick={() => {
+                        if (!openExternalUrl(githubUrl)) {
+                          toast.error('Invalid GitHub URL');
+                        }
+                      }}
                       className="gap-2"
                     >
                       <Github className="h-4 w-4" />
                       GitHub
                     </Button>
                   )}
-                  {project.liveUrl && (
+                  {liveUrl && (
                     <Button
                       variant="outline"
-                      onClick={() => window.open(project.liveUrl, '_blank', 'noopener,noreferrer')}
+                      onClick={() => {
+                        if (!openExternalUrl(liveUrl)) {
+                          toast.error('Invalid live URL');
+                        }
+                      }}
                       className="gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />

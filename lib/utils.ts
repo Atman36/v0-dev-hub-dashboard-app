@@ -10,6 +10,31 @@ export function generateId(): string {
   return nanoid();
 }
 
+export function getSafeExternalUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function openExternalUrl(value: string): boolean {
+  const safeUrl = getSafeExternalUrl(value);
+  if (!safeUrl || typeof window === 'undefined') {
+    return false;
+  }
+
+  window.open(safeUrl, '_blank', 'noopener,noreferrer');
+  return true;
+}
+
 /**
  * Downloads a JSON file with the given content and filename.
  * @param content The JSON content string.

@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from './status-badge';
 import { ExternalLink, Github, ArrowRight, Pencil } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
 import { ImageWithFallback } from './image-with-fallback';
+import { PROJECT_CATEGORY_LABELS } from '@/lib/constants';
 
 interface ProjectCardProps {
   project: Project;
@@ -17,14 +18,21 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {
+  const githubUrl = getSafeExternalUrl(project.githubUrl);
+  const liveUrl = getSafeExternalUrl(project.liveUrl);
+
   const handleGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (project.githubUrl) window.open(project.githubUrl, '_blank', 'noopener,noreferrer');
+    if (githubUrl) {
+      openExternalUrl(githubUrl);
+    }
   };
 
   const handleLive = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (project.liveUrl) window.open(project.liveUrl, '_blank', 'noopener,noreferrer');
+    if (liveUrl) {
+      openExternalUrl(liveUrl);
+    }
   };
 
   const getInitials = (title: string) => {
@@ -42,7 +50,16 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
         'group cursor-pointer overflow-hidden border-border bg-card transition-all duration-200',
         'hover:scale-[1.01] hover:border-border/60 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10'
       )}
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+        event.preventDefault();
+        onClick();
+      }}
     >
       {/* Image area */}
       <div
@@ -79,7 +96,7 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
             </h3>
           </div>
           <Badge variant="outline" className="text-xs border-border/60 text-muted-foreground">
-            {project.category}
+            {PROJECT_CATEGORY_LABELS[project.category]}
           </Badge>
         </div>
 
@@ -87,7 +104,7 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
 
         {/* Actions row */}
         <div className="flex items-center gap-2 pt-1">
-          {project.githubUrl && (
+          {githubUrl && (
             <Button
               variant="ghost"
               size="sm"
@@ -98,7 +115,7 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
               <Github className="h-4 w-4" />
             </Button>
           )}
-          {project.liveUrl && (
+          {liveUrl && (
             <Button
               variant="ghost"
               size="sm"
