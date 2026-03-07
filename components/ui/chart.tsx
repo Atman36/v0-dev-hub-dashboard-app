@@ -129,14 +129,15 @@ function ChartTooltipContent({
   const { config } = useChart()
 
   const tooltipLabel = React.useMemo(() => {
-    if (hideLabel || !payload?.length) {
+    const shouldHideLabel = hideLabel || !payload?.length
+    if (shouldHideLabel) {
       return null
     }
 
     const [item] = payload
     const key = `${labelKey || item?.dataKey || item?.name || 'value'}`
     const itemConfig = getPayloadConfigFromPayload(config, item, key)
-    const value =
+    const labelValue =
       !labelKey && typeof label === 'string'
         ? config[label as keyof typeof config]?.label || label
         : itemConfig?.label
@@ -144,16 +145,16 @@ function ChartTooltipContent({
     if (labelFormatter) {
       return (
         <div className={cn('font-medium', labelClassName)}>
-          {labelFormatter(value, payload)}
+          {labelFormatter(labelValue, payload)}
         </div>
       )
     }
 
-    if (!value) {
+    if (!labelValue) {
       return null
     }
 
-    return <div className={cn('font-medium', labelClassName)}>{value}</div>
+    return <div className={cn('font-medium', labelClassName)}>{labelValue}</div>
   }, [
     label,
     labelFormatter,
@@ -164,7 +165,8 @@ function ChartTooltipContent({
     labelKey,
   ])
 
-  if (!active || !payload?.length) {
+  const hasPayload = !!payload?.length
+  if (!active || !hasPayload) {
     return null
   }
 
@@ -184,6 +186,11 @@ function ChartTooltipContent({
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
           const indicatorColor = color || item.payload.fill || item.color
 
+          const formattedValue = item.value
+          const formattedName = item.name
+          const canUseFormatter =
+            !!formatter && formattedValue !== undefined && formattedName !== undefined
+
           return (
             <div
               key={item.dataKey}
@@ -192,8 +199,8 @@ function ChartTooltipContent({
                 indicator === 'dot' && 'items-center',
               )}
             >
-              {formatter && item?.value !== undefined && item.name ? (
-                formatter(item.value, item.name, item, index, item.payload)
+              {canUseFormatter ? (
+                formatter(formattedValue, formattedName, item, index, item.payload)
               ) : (
                 <>
                   {itemConfig?.icon ? (
@@ -314,25 +321,27 @@ function getPayloadConfigFromPayload(
     return undefined
   }
 
-  const payloadPayload =
+  const hasNestedPayload =
     'payload' in payload &&
     typeof payload.payload === 'object' &&
     payload.payload !== null
-      ? payload.payload
-      : undefined
+  const payloadPayload: Record<string, unknown> | undefined = hasNestedPayload
+    ? (payload.payload as Record<string, unknown>)
+    : undefined
 
   let configLabelKey: string = key
 
-  if (
+  const isKeyInPayload =
     key in payload &&
     typeof payload[key as keyof typeof payload] === 'string'
-  ) {
-    configLabelKey = payload[key as keyof typeof payload] as string
-  } else if (
-    payloadPayload &&
+  const isKeyInNestedPayload =
+    payloadPayload !== undefined &&
     key in payloadPayload &&
     typeof payloadPayload[key as keyof typeof payloadPayload] === 'string'
-  ) {
+
+  if (isKeyInPayload) {
+    configLabelKey = payload[key as keyof typeof payload] as string
+  } else if (isKeyInNestedPayload) {
     configLabelKey = payloadPayload[
       key as keyof typeof payloadPayload
     ] as string

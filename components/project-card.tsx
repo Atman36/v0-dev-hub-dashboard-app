@@ -17,6 +17,25 @@ interface ProjectCardProps {
   aspectRatio?: 'video' | 'portrait';
 }
 
+function getInitials(title: string) {
+  let initials = '';
+
+  for (let index = 0; index < title.length; index += 1) {
+    const char = title[index];
+    const previousChar = title[index - 1];
+
+    if ((index === 0 || previousChar === ' ') && char !== ' ') {
+      initials += char.toUpperCase();
+    }
+
+    if (initials.length === 2) {
+      break;
+    }
+  }
+
+  return initials;
+}
+
 export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {
   const githubUrl = getSafeExternalUrl(project.githubUrl);
   const liveUrl = getSafeExternalUrl(project.liveUrl);
@@ -33,15 +52,6 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
     if (liveUrl) {
       openExternalUrl(liveUrl);
     }
-  };
-
-  const getInitials = (title: string) => {
-    return title
-      .split(' ')
-      .map((word) => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   return (
