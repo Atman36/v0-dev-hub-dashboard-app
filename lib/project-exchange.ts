@@ -107,25 +107,26 @@ function toStringArray(value: unknown): string[] {
 }
 
 function toTasks(value: unknown): Task[] {
-  return toUnknownArray(value)
-    .map((item) => {
-      if (!isRecord(item)) {
-        return null;
-      }
+  const items = toUnknownArray(value);
+  const tasks: Task[] = [];
 
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (isRecord(item)) {
       const parsed = ImportedTaskSchema.safeParse({
         id: item.id,
         text: item.text,
         isDone: typeof item.isDone === 'boolean' ? item.isDone : false,
       });
 
-      if (!parsed.success) {
-        return null;
+      if (parsed.success) {
+        tasks.push(parsed.data);
       }
+    }
+  }
 
-      return parsed.data;
-    })
-    .filter((item): item is Task => item !== null);
+  return tasks;
 }
 
 function toProjectImportInput(candidate: Record<string, unknown>) {
