@@ -16,6 +16,17 @@ interface ProjectCardProps {
   aspectRatio?: 'video' | 'portrait';
 }
 
+const getInitials = (title: string) => {
+  let initials = '';
+  for (let i = 0; i < title.length; i++) {
+    if ((i === 0 || title[i - 1] === ' ') && title[i] !== ' ') {
+      initials += title[i].toUpperCase();
+      if (initials.length === 2) break;
+    }
+  }
+  return initials;
+};
+
 export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {
   const handleGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -25,15 +36,6 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
   const handleLive = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (project.liveUrl) window.open(project.liveUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const getInitials = (title: string) => {
-    return title
-      .split(' ')
-      .map((word) => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   return (
