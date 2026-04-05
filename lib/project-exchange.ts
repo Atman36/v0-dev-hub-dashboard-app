@@ -10,12 +10,6 @@ const ProjectTypeSchema = z.enum(PROJECT_TYPES);
 const ProjectCategorySchema = z.enum(PROJECT_CATEGORIES);
 const ProjectStatusSchema = z.enum(PROJECT_STATUSES);
 
-const ImportedTaskSchema = z.object({
-  id: z.string().trim().min(1),
-  text: z.string().trim().min(1),
-  isDone: z.boolean(),
-});
-
 const ImportedProjectSchema = z.object({
   id: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1),
@@ -29,7 +23,7 @@ const ImportedProjectSchema = z.object({
   status: ProjectStatusSchema.catch('idea'),
   lastReviewDate: z.string().optional(),
   createdAt: z.string().optional(),
-  tasks: z.array(ImportedTaskSchema),
+  tasks: z.array(z.any()), // Manual validation already handled by toTasks
 });
 
 export interface SupabaseProjectRow {
@@ -106,21 +100,6 @@ function toStringArray(value: unknown): string[] {
   return toUnknownArray(value).filter((item): item is string => typeof item === 'string');
 }
 
-function toTask(value: Record<string, unknown>): Task | null {
-  const id = typeof value.id === 'string' ? value.id.trim() : '';
-  const text = typeof value.text === 'string' ? value.text.trim() : '';
-
-  if (!id || !text) {
-    return null;
-  }
-
-  return {
-    id,
-    text,
-    isDone: typeof value.isDone === 'boolean' ? value.isDone : false,
-  };
-}
-
 export function toTasks(value: unknown): Task[] {
   const items = toUnknownArray(value);
   const tasks: Task[] = [];
@@ -131,10 +110,25 @@ export function toTasks(value: unknown): Task[] {
       continue;
     }
 
-    const task = toTask(item);
-    if (task) {
-      tasks.push(task);
+    const idRaw = item.id;
+    const textRaw = item.text;
+
+    if (typeof idRaw !== 'string' || typeof textRaw !== 'string') {
+      continue;
     }
+
+    const id = idRaw.trim();
+    const text = textRaw.trim();
+
+    if (id.length === 0 || text.length === 0) {
+      continue;
+    }
+
+    tasks.push({
+      id,
+      text,
+      isDone: typeof item.isDone === 'boolean' ? item.isDone : false,
+    });
   }
 
   return tasks;
