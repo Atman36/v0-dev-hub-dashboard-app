@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { Project } from './types';
 import {
   normalizeToProject,
@@ -29,14 +30,16 @@ export interface ImportProjectsResult {
   detectedFormat: string;
 }
 
-function parseStoredProjects(rawData: string): Project[] {
-  const parsed = JSON.parse(rawData) as unknown;
+const StoredProjectsSchema = z.array(z.unknown());
 
-  if (!Array.isArray(parsed)) {
+function parseStoredProjects(rawData: string): Project[] {
+  const result = StoredProjectsSchema.safeParse(JSON.parse(rawData));
+
+  if (!result.success) {
     return [];
   }
 
-  return parsed
+  return result.data
     .map((item) => normalizeToProject(item))
     .filter((project): project is Project => project !== null);
 }
