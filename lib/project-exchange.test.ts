@@ -112,6 +112,9 @@ test('normalizeToProject: parses tasks and filters invalid ones', () => {
       { id: '   ', text: 'Whitespace ID' }, // Should be filtered out
       { id: '4', text: '   ' }, // Should be filtered out
       'not-a-task-object', // Should be filtered out
+      null, // Should be filtered out
+      { id: '\t \n', text: 'Whitespace tabs and newlines' }, // Should be filtered out
+      { id: '5', text: '\t \n' }, // Should be filtered out
     ],
   };
   const project = normalizeToProject(candidate);

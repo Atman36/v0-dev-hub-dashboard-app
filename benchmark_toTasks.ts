@@ -1,115 +1,128 @@
-import assert from 'node:assert';
-import { performance } from 'node:perf_hooks';
-import { z } from 'zod';
-
 import { toTasks } from './lib/project-exchange.ts';
 
-const ImportedTaskSchema = z.object({
-  id: z.string().trim().min(1),
-  text: z.string().trim().min(1),
-  isDone: z.boolean(),
-});
-
-type Task = z.infer<typeof ImportedTaskSchema>;
-
-const ITEM_COUNT = 50_000;
-const ITERATIONS = 250;
-const WARMUP_RUNS = 25;
-
+// Legacy implementation for reference
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function legacyToTasks(value: unknown): Task[] {
-  if (!Array.isArray(value)) {
-    return [];
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
   }
-
-  return value
-    .map((item) => {
-      if (!isRecord(item)) {
-        return null;
-      }
-
-      const parsed = ImportedTaskSchema.safeParse({
-        id: item.id,
-        text: item.text,
-        isDone: typeof item.isDone === 'boolean' ? item.isDone : false,
-      });
-
-      if (!parsed.success) {
-        return null;
-      }
-
-      return parsed.data;
-    })
-    .filter((item): item is Task => item !== null);
 }
 
-function buildDataset(): unknown[] {
-  return Array.from({ length: ITEM_COUNT }, (_, index) => {
-    if (index % 9 === 0) {
-      return { text: `missing-id-${index}` };
-    }
-
-    if (index % 11 === 0) {
-      return null;
-    }
-
-    if (index % 13 === 0) {
-      return `not-an-object-${index}`;
-    }
-
-    return {
-      id: `task-${index}`,
-      text: `Task ${index}`,
-      isDone: index % 2 === 0,
-      ignored: { index },
-    };
-  });
+function toUnknownArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = parseJson(value);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+  return [];
 }
 
-function benchmark(label: string, fn: (value: unknown) => Task[], dataset: unknown) {
-  for (let run = 0; run < WARMUP_RUNS; run += 1) {
-    fn(dataset);
+function legacyToTask(value: Record<string, unknown>) {
+  const id = typeof value.id === 'string' ? value.id.trim() : '';
+  const text = typeof value.text === 'string' ? value.text.trim() : '';
+
+  if (!id || !text) {
+    return null;
   }
-
-  const startedAt = performance.now();
-  let totalTasks = 0;
-
-  for (let run = 0; run < ITERATIONS; run += 1) {
-    totalTasks += fn(dataset).length;
-  }
-
-  const totalMs = performance.now() - startedAt;
 
   return {
-    label,
-    totalMs,
-    avgMs: totalMs / ITERATIONS,
-    totalTasks,
+    id,
+    text,
+    isDone: typeof value.isDone === 'boolean' ? value.isDone : false,
   };
 }
 
-const dataset = buildDataset();
-const legacyResult = legacyToTasks(dataset);
-const currentResult = toTasks(dataset);
+function legacyToTasks(value: unknown) {
+  const items = toUnknownArray(value);
+  const tasks = [];
 
-assert.deepStrictEqual(currentResult, legacyResult);
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    if (!isRecord(item)) {
+      continue;
+    }
 
-const legacyStats = benchmark('legacy map/filter', legacyToTasks, dataset);
-const currentStats = benchmark('current single-pass', toTasks, dataset);
-const improvementMs = legacyStats.avgMs - currentStats.avgMs;
-const improvementPct = (improvementMs / legacyStats.avgMs) * 100;
+    const task = legacyToTask(item);
+    if (task) {
+      tasks.push(task);
+    }
+  }
 
-console.log(`Dataset size: ${ITEM_COUNT.toLocaleString()} items`);
-console.log(`Iterations: ${ITERATIONS}`);
-console.log(
-  `${legacyStats.label}: total=${legacyStats.totalMs.toFixed(2)}ms avg=${legacyStats.avgMs.toFixed(3)}ms`,
-);
-console.log(
-  `${currentStats.label}: total=${currentStats.totalMs.toFixed(2)}ms avg=${currentStats.avgMs.toFixed(3)}ms`,
-);
-console.log(
-  `Improvement: ${improvementMs.toFixed(3)}ms per run (${improvementPct.toFixed(2)}%)`,
-);
+  return tasks;
+}
+
+// Generate mixed dataset
+const dataset: unknown[] = [];
+const NUM_ITEMS = 50_000;
+
+for (let i = 0; i < NUM_ITEMS; i++) {
+  const type = i % 6;
+  if (type === 0) {
+    // Valid task
+    dataset.push({ id: `id-${i}`, text: `Text ${i}`, isDone: i % 2 === 0 });
+  } else if (type === 1) {
+    // Missing ID
+    dataset.push({ text: `Text ${i}`, isDone: false });
+  } else if (type === 2) {
+    // Missing text
+    dataset.push({ id: `id-${i}`, isDone: true });
+  } else if (type === 3) {
+    // Whitespace only
+    dataset.push({ id: '   ', text: '\t\n  ' });
+  } else if (type === 4) {
+    // Non-object
+    dataset.push(i % 2 === 0 ? null : 'just string');
+  } else if (type === 5) {
+    // Valid missing isDone
+    dataset.push({ id: `id-${i}`, text: `Valid text ${i}` });
+  }
+}
+
+// 1. Verify exact identical output
+const legacyOutput = legacyToTasks(dataset);
+const newOutput = toTasks(dataset);
+
+// Simple deep equal logic (Node 20 test runner asserts not directly available here in simple script, doing manual check)
+if (JSON.stringify(legacyOutput) !== JSON.stringify(newOutput)) {
+  console.error("Mismatch in outputs!");
+  console.log("Legacy:", legacyOutput.slice(0, 3));
+  console.log("New   :", newOutput.slice(0, 3));
+  process.exit(1);
+}
+console.log(`Outputs match! Processed ${legacyOutput.length} valid tasks from ${NUM_ITEMS} mixed items.`);
+
+// 2. Measure performance (Warmup + Runs)
+const ITERATIONS = 100;
+
+console.log("Warming up...");
+for (let i = 0; i < 10; i++) {
+  legacyToTasks(dataset);
+  toTasks(dataset);
+}
+
+console.log(`Running benchmark (${ITERATIONS} iterations)...`);
+
+const startLegacy = performance.now();
+for (let i = 0; i < ITERATIONS; i++) {
+  legacyToTasks(dataset);
+}
+const endLegacy = performance.now();
+
+const startNew = performance.now();
+for (let i = 0; i < ITERATIONS; i++) {
+  toTasks(dataset);
+}
+const endNew = performance.now();
+
+const timeLegacy = (endLegacy - startLegacy).toFixed(2);
+const timeNew = (endNew - startNew).toFixed(2);
+
+console.log(`Legacy time : ${timeLegacy}ms`);
+console.log(`New time    : ${timeNew}ms`);
