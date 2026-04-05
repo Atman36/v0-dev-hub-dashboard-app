@@ -28,7 +28,7 @@ import {
   Save,
   Upload,
 } from 'lucide-react';
-import { cn, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
+import { cn, getSafeExternalUrl, openExternalUrl, getSafeVsCodeUrl } from '@/lib/utils';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
 import { toast } from 'sonner';
@@ -241,10 +241,12 @@ export function ProjectDetail({
   };
 
   const handleOpenVSCode = () => {
-    const normalizedPath = project.localPath.startsWith('/')
-      ? project.localPath
-      : `/${project.localPath}`;
-    window.location.href = `vscode://file${encodeURI(normalizedPath)}`;
+    const vscodeUrl = getSafeVsCodeUrl(project.localPath);
+    if (vscodeUrl) {
+      window.location.href = vscodeUrl;
+    } else {
+      toast.error('Invalid or unsafe local path');
+    }
   };
 
   const handleStatusChange = (status: ProjectStatus) => {

@@ -61,3 +61,29 @@ export function downloadJsonFile(content: string, filename: string): void {
   // Revoke the object URL after a short delay to ensure download starts
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/**
+ * Validates and encodes a path for use in a vscode://file URL.
+ * @param path The local file path.
+ * @returns A safe vscode://file URL or null if the path is invalid/unsafe.
+ */
+export function getSafeVsCodeUrl(path: string): string | null {
+  if (!path || typeof path !== 'string') return null;
+
+  // Block directory traversal (..)
+  if (path.includes('..')) return null;
+
+  // Block control characters
+  if (/[\x00-\x1F]/.test(path)) return null;
+
+  // Normalize path: ensure it starts with '/'
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  // Encode path segments individually to prevent injection of URI components like ? or #
+  const encodedPath = normalizedPath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  return `vscode://file${encodedPath}`;
+}
