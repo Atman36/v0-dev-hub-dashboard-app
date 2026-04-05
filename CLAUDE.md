@@ -62,8 +62,3 @@ Export produces `devhub.projects` v1 JSON (envelope with `format`, `version`, `e
 - Components: shadcn/ui (Radix UI primitives + Tailwind v4)
 - Toasts: `sonner` via `<Toaster position="bottom-right" />`
 - Keyboard shortcuts: `Cmd/Ctrl+K` focuses search, `Cmd/Ctrl+N` opens add dialog
-
-## Known issues (from AUDIT.md)
-
-1. **High**: Persistence is `localStorage` — quota-limited. Recommended migration: IndexedDB.
-2. **High**: `ProjectDetail` is a large mixed-responsibility component; consider splitting into subcomponents.
