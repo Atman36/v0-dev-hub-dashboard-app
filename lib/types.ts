@@ -1,4 +1,4 @@
-import { PROJECT_TYPES, PROJECT_CATEGORIES, PROJECT_STATUSES } from './constants';
+import { PROJECT_TYPES, PROJECT_CATEGORIES, PROJECT_STATUSES } from './constants.ts';
 
 export type ProjectType = typeof PROJECT_TYPES[number];
 export type ProjectCategory = typeof PROJECT_CATEGORIES[number];

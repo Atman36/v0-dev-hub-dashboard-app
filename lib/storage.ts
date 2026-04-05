@@ -1,10 +1,10 @@
-import { Project } from './types';
+import type { Project } from './types.ts';
 import {
   normalizeToProject,
   parseImportedProjects,
   serializeProjectsForExport,
-} from './project-exchange';
-import { STORAGE_KEY } from './constants';
+} from './project-exchange.ts';
+import { STORAGE_KEY } from './constants.ts';
 export const LOCAL_STORAGE_SOFT_LIMIT_BYTES = 5 * 1024 * 1024;
 
 type ImportMode = 'replace' | 'merge';
@@ -140,7 +140,7 @@ export const storage = {
   },
 };
 
-export { generateId } from './utils';
+export { generateId } from './utils.ts';
 
 function getByteSize(value: string): number {
   if (typeof Blob !== 'undefined') {

@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { test } from 'node:test';
-import { getSafeExternalUrl } from './utils';
+import { getSafeExternalUrl } from './utils.ts';
 
 test('getSafeExternalUrl returns null for empty or whitespace strings', () => {
   assert.strictEqual(getSafeExternalUrl(''), null);

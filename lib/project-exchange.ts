@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { Project, ProjectCategory, ProjectStatus, ProjectType, Task } from './types';
-import { PROJECT_TYPES, PROJECT_CATEGORIES, PROJECT_STATUSES } from './constants';
-import { generateId } from './utils';
+import type { Project, ProjectCategory, ProjectStatus, ProjectType, Task } from './types.ts';
+import { PROJECT_TYPES, PROJECT_CATEGORIES, PROJECT_STATUSES } from './constants.ts';
+import { generateId } from './utils.ts';
 
 export const PROJECT_EXCHANGE_FORMAT = 'devhub.projects';
 export const PROJECT_EXCHANGE_VERSION = 1;
@@ -106,7 +106,22 @@ function toStringArray(value: unknown): string[] {
   return toUnknownArray(value).filter((item): item is string => typeof item === 'string');
 }
 
-function toTasks(value: unknown): Task[] {
+function toTask(value: Record<string, unknown>): Task | null {
+  const id = typeof value.id === 'string' ? value.id.trim() : '';
+  const text = typeof value.text === 'string' ? value.text.trim() : '';
+
+  if (!id || !text) {
+    return null;
+  }
+
+  return {
+    id,
+    text,
+    isDone: typeof value.isDone === 'boolean' ? value.isDone : false,
+  };
+}
+
+export function toTasks(value: unknown): Task[] {
   const items = toUnknownArray(value);
   const tasks: Task[] = [];
 
@@ -116,14 +131,9 @@ function toTasks(value: unknown): Task[] {
       continue;
     }
 
-    const parsed = ImportedTaskSchema.safeParse({
-      id: item.id,
-      text: item.text,
-      isDone: typeof item.isDone === 'boolean' ? item.isDone : false,
-    });
-
-    if (parsed.success) {
-      tasks.push(parsed.data);
+    const task = toTask(item);
+    if (task) {
+      tasks.push(task);
     }
   }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { normalizeToProject } from './project-exchange';
+import { normalizeToProject } from './project-exchange.ts';
 
 test('normalizeToProject: returns null for non-record candidates', () => {
   assert.strictEqual(normalizeToProject(null), null);
@@ -107,18 +107,26 @@ test('normalizeToProject: parses tasks and filters invalid ones', () => {
     tasks: [
       { id: '1', text: 'Valid Task', isDone: true },
       { id: '2', text: 'Task without isDone' }, // isDone should default to false
+      { id: ' 3 ', text: '  Trimmed Task  ' },
       { text: 'Missing ID' }, // Should be filtered out
+      { id: '   ', text: 'Whitespace ID' }, // Should be filtered out
+      { id: '4', text: '   ' }, // Should be filtered out
       'not-a-task-object', // Should be filtered out
     ],
   };
   const project = normalizeToProject(candidate);
   assert.notStrictEqual(project, null);
   if (project) {
-    assert.strictEqual(project.tasks.length, 2);
+    assert.strictEqual(project.tasks.length, 3);
     assert.strictEqual(project.tasks[0].id, '1');
     assert.strictEqual(project.tasks[0].isDone, true);
     assert.strictEqual(project.tasks[1].id, '2');
     assert.strictEqual(project.tasks[1].isDone, false);
+    assert.deepStrictEqual(project.tasks[2], {
+      id: '3',
+      text: 'Trimmed Task',
+      isDone: false,
+    });
   }
 });
 

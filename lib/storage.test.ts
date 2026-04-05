@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { test } from 'node:test';
-import { estimateProjectsStorageUsageBytes } from './storage';
-import type { Project } from './types';
+import { estimateProjectsStorageUsageBytes } from './storage.ts';
+import type { Project } from './types.ts';
 
 const mockProject: Project = {
   id: 'test-id',
