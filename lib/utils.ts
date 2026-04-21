@@ -25,6 +25,63 @@ export function getSafeExternalUrl(value: string): string | null {
   }
 }
 
+/**
+ * Sanitizes a URL for use in href or other sensitive contexts.
+ * Allows safe absolute protocols (http, https), relative paths, and anchors.
+ * Blocks protocol-relative URLs (//) and dangerous schemes (javascript:, data:).
+ */
+export function getSafeUrl(url: string): string {
+  if (!url) return '';
+
+  const trimmed = url.trim();
+
+  // Block protocol-relative URLs (e.g., //evil.com)
+  if (trimmed.startsWith('//')) {
+    return '';
+  }
+
+  // Allow relative paths (starting with /), anchors (#), and standard protocols (http, https)
+  if (
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://')
+  ) {
+    return trimmed;
+  }
+
+  // Treat anything else as potentially unsafe
+  return '';
+}
+
+/**
+ * Sanitizes a filesystem path for use with the vscode:// protocol.
+ * Blocks directory traversal (..) and control characters.
+ * Encodes path segments and ensures a leading slash.
+ */
+export function getSafeVsCodeUrl(path: string): string | null {
+  if (!path) return null;
+
+  // Block directory traversal and other suspicious patterns
+  if (path.includes('..') || /[\x00-\x1F\x7F]/.test(path)) {
+    return null;
+  }
+
+  // Ensure leading slash and normalize separators to forward slashes
+  let normalized = path.replace(/\\/g, '/');
+  if (!normalized.startsWith('/')) {
+    normalized = `/${normalized}`;
+  }
+
+  // Individual segments should be encoded, but we need to keep the slashes
+  const encodedPath = normalized
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  return `vscode://file${encodedPath}`;
+}
+
 export function openExternalUrl(value: string): boolean {
   const safeUrl = getSafeExternalUrl(value);
   if (!safeUrl || typeof window === 'undefined') {
