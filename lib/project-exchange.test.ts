@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { normalizeToProject } from './project-exchange.ts';
+import {
+  normalizeToProject,
+  serializeProjectsForExport,
+  PROJECT_EXCHANGE_FORMAT,
+  PROJECT_EXCHANGE_VERSION
+} from './project-exchange.ts';
+import type { Project } from './types.ts';
 
 test('normalizeToProject: returns null for non-record candidates', () => {
   assert.strictEqual(normalizeToProject(null), null);
@@ -142,4 +148,82 @@ test('normalizeToProject: uses provided ID or generates one', () => {
   const projectWithoutId = normalizeToProject(candidateWithoutId);
   assert.ok(projectWithoutId?.id);
   assert.notStrictEqual(projectWithoutId?.id, 'custom-id');
+});
+
+test('serializeProjectsForExport: handles empty projects array', () => {
+  const projects: Project[] = [];
+  const result = serializeProjectsForExport(projects);
+  const parsed = JSON.parse(result);
+
+  assert.strictEqual(parsed.format, PROJECT_EXCHANGE_FORMAT);
+  assert.strictEqual(parsed.version, PROJECT_EXCHANGE_VERSION);
+  assert.ok(parsed.exported_at);
+  assert.ok(!isNaN(Date.parse(parsed.exported_at)));
+  assert.deepStrictEqual(parsed.projects, []);
+});
+
+test('serializeProjectsForExport: correctly transforms project fields', () => {
+  const project: Project = {
+    id: 'test-id',
+    title: 'Test Project',
+    type: 'web',
+    category: 'other',
+    images: ['image1.webp'],
+    githubUrl: 'https://github.com/user/repo',
+    liveUrl: 'https://example.com',
+    localPath: '/local/path',
+    description: 'Test Description',
+    status: 'idea',
+    lastReviewDate: '2023-01-02T10:00:00.000Z',
+    createdAt: '2023-01-01T10:00:00.000Z',
+    tasks: [{ id: 'task-1', text: 'Task 1', isDone: false }],
+  };
+
+  const result = serializeProjectsForExport([project]);
+  const parsed = JSON.parse(result);
+
+  assert.strictEqual(parsed.projects.length, 1);
+  const row = parsed.projects[0];
+
+  assert.strictEqual(row.id, project.id);
+  assert.strictEqual(row.title, project.title);
+  assert.strictEqual(row.type, project.type);
+  assert.strictEqual(row.category, project.category);
+  assert.deepStrictEqual(row.images, project.images);
+  assert.strictEqual(row.github_url, project.githubUrl);
+  assert.strictEqual(row.live_url, project.liveUrl);
+  assert.strictEqual(row.local_path, project.localPath);
+  assert.strictEqual(row.description, project.description);
+  assert.strictEqual(row.status, project.status);
+  assert.strictEqual(row.last_review_date, project.lastReviewDate);
+  assert.strictEqual(row.created_at, project.createdAt);
+  assert.strictEqual(row.updated_at, parsed.exported_at);
+  assert.deepStrictEqual(row.tasks, project.tasks);
+});
+
+test('serializeProjectsForExport: handles nullish optional fields', () => {
+  const project: Project = {
+    id: 'test-id',
+    title: 'Minimal Project',
+    type: 'web',
+    category: 'other',
+    images: [],
+    githubUrl: '',
+    liveUrl: '',
+    localPath: '',
+    description: '',
+    status: 'idea',
+    lastReviewDate: '2023-01-01T10:00:00.000Z',
+    createdAt: '2023-01-01T10:00:00.000Z',
+    tasks: [],
+  };
+
+  const result = serializeProjectsForExport([project]);
+  const parsed = JSON.parse(result);
+  const row = parsed.projects[0];
+
+  assert.strictEqual(row.github_url, null);
+  assert.strictEqual(row.live_url, null);
+  assert.strictEqual(row.local_path, null);
+  assert.strictEqual(row.description, null);
 });
