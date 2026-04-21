@@ -6,6 +6,7 @@ import {
   PROJECT_EXCHANGE_VERSION,
   serializeProjectsForExport,
   toTasks,
+  parseImportedProjects,
 } from './project-exchange.ts';
 import type { Project } from './types.ts';
 
@@ -286,4 +287,16 @@ test('serializeProjectsForExport: converts empty optional fields to null', () =>
   assert.strictEqual(parsed.projects[0].live_url, null);
   assert.strictEqual(parsed.projects[0].local_path, null);
   assert.strictEqual(parsed.projects[0].description, null);
+});
+
+test('parseImportedProjects: throws error for invalid JSON file', () => {
+  assert.throws(
+    () => {
+      parseImportedProjects('invalid-json');
+    },
+    {
+      name: 'Error',
+      message: 'Invalid JSON file',
+    }
+  );
 });
