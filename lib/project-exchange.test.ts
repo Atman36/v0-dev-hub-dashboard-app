@@ -151,51 +151,67 @@ test('normalizeToProject: uses provided ID or generates one', () => {
   assert.notStrictEqual(projectWithoutId?.id, 'custom-id');
 });
 
-test('toTasks: returns empty array for non-array and invalid JSON inputs', () => {
+test('toTasks: returns empty array for non-array inputs', () => {
   assert.deepStrictEqual(toTasks(null), []);
   assert.deepStrictEqual(toTasks({}), []);
+  assert.deepStrictEqual(toTasks(123), []);
+  assert.deepStrictEqual(toTasks(undefined), []);
+  assert.deepStrictEqual(toTasks('string'), []);
+});
+
+test('toTasks: returns empty array for invalid JSON string inputs', () => {
   assert.deepStrictEqual(toTasks('not-json'), []);
+});
+
+test('toTasks: accepts JSON strings that parse to arrays', () => {
+  assert.deepStrictEqual(toTasks('[{"id":"1","text":"Task 1"}]'), [
+    { id: '1', text: 'Task 1', isDone: false },
+  ]);
+});
+
+test('toTasks: returns empty array for JSON strings that parse to non-arrays', () => {
   assert.deepStrictEqual(toTasks('{"tasks":[]}'), []);
 });
 
-test('toTasks: accepts arrays and JSON array strings', () => {
-  assert.deepStrictEqual(toTasks([{ id: '1', text: 'Task 1', isDone: true }]), [
-    { id: '1', text: 'Task 1', isDone: true },
-  ]);
-
-  assert.deepStrictEqual(toTasks('[{"id":"2","text":"Task 2"}]'), [
-    { id: '2', text: 'Task 2', isDone: false },
+test('toTasks: filters out invalid items (non-objects)', () => {
+  assert.deepStrictEqual(toTasks([{ id: '1', text: 'Task 1' }, 'string', null, 123]), [
+    { id: '1', text: 'Task 1', isDone: false },
   ]);
 });
 
-test('toTasks: trims values and filters invalid items', () => {
-  assert.deepStrictEqual(
-    toTasks([
-      { id: ' 1 ', text: ' Trim me ' },
-      { id: '2' },
-      { text: 'Missing ID' },
-      { id: '3', text: '   ' },
-      { id: '   ', text: 'Missing after trim' },
-      { id: 4, text: 'Wrong id type' },
-      { id: '5', text: ['wrong type'] },
-      'not-a-task',
-      null,
-    ]),
-    [{ id: '1', text: 'Trim me', isDone: false }],
-  );
+test('toTasks: filters out items missing id', () => {
+  assert.deepStrictEqual(toTasks([{ text: 'Task 1' }]), []);
 });
 
-test('toTasks: defaults isDone to false unless boolean', () => {
+test('toTasks: filters out items missing text', () => {
+  assert.deepStrictEqual(toTasks([{ id: '1' }]), []);
+});
+
+test('toTasks: filters out items with non-string id or text', () => {
+  assert.deepStrictEqual(toTasks([{ id: 1, text: 'Task 1' }, { id: '2', text: 2 }]), []);
+});
+
+test('toTasks: filters out items with whitespace-only id or text', () => {
+  assert.deepStrictEqual(toTasks([{ id: '   ', text: 'Task 1' }, { id: '3', text: '   ' }]), []);
+});
+
+test('toTasks: trims id and text values', () => {
+  assert.deepStrictEqual(toTasks([{ id: ' 1 ', text: ' Task 1 ' }]), [
+    { id: '1', text: 'Task 1', isDone: false },
+  ]);
+});
+
+test('toTasks: preserves isDone only when boolean, otherwise defaults to false', () => {
   assert.deepStrictEqual(
     toTasks([
-      { id: '1', text: 'Done', isDone: true },
-      { id: '2', text: 'Not done' },
-      { id: '3', text: 'Invalid flag', isDone: 'yes' },
+      { id: '1', text: 'Task 1', isDone: true },
+      { id: '2', text: 'Task 2', isDone: 'yes' },
+      { id: '3', text: 'Task 3' },
     ]),
     [
-      { id: '1', text: 'Done', isDone: true },
-      { id: '2', text: 'Not done', isDone: false },
-      { id: '3', text: 'Invalid flag', isDone: false },
+      { id: '1', text: 'Task 1', isDone: true },
+      { id: '2', text: 'Task 2', isDone: false },
+      { id: '3', text: 'Task 3', isDone: false },
     ],
   );
 });
