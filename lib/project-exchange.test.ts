@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { normalizeToProject } from './project-exchange.ts';
+import {
+  normalizeToProject,
+  PROJECT_EXCHANGE_FORMAT,
+  PROJECT_EXCHANGE_VERSION,
+  serializeProjectsForExport,
+  toTasks,
+} from './project-exchange.ts';
+import type { Project } from './types.ts';
 
 test('normalizeToProject: returns null for non-record candidates', () => {
   assert.strictEqual(normalizeToProject(null), null);
@@ -142,4 +149,125 @@ test('normalizeToProject: uses provided ID or generates one', () => {
   const projectWithoutId = normalizeToProject(candidateWithoutId);
   assert.ok(projectWithoutId?.id);
   assert.notStrictEqual(projectWithoutId?.id, 'custom-id');
+});
+
+test('toTasks: returns empty array for non-array and invalid JSON inputs', () => {
+  assert.deepStrictEqual(toTasks(null), []);
+  assert.deepStrictEqual(toTasks({}), []);
+  assert.deepStrictEqual(toTasks('not-json'), []);
+  assert.deepStrictEqual(toTasks('{"tasks":[]}'), []);
+});
+
+test('toTasks: accepts arrays and JSON array strings', () => {
+  assert.deepStrictEqual(toTasks([{ id: '1', text: 'Task 1', isDone: true }]), [
+    { id: '1', text: 'Task 1', isDone: true },
+  ]);
+
+  assert.deepStrictEqual(toTasks('[{"id":"2","text":"Task 2"}]'), [
+    { id: '2', text: 'Task 2', isDone: false },
+  ]);
+});
+
+test('toTasks: trims values and filters invalid items', () => {
+  assert.deepStrictEqual(
+    toTasks([
+      { id: ' 1 ', text: ' Trim me ' },
+      { id: '2' },
+      { text: 'Missing ID' },
+      { id: '3', text: '   ' },
+      { id: '   ', text: 'Missing after trim' },
+      { id: 4, text: 'Wrong id type' },
+      { id: '5', text: ['wrong type'] },
+      'not-a-task',
+      null,
+    ]),
+    [{ id: '1', text: 'Trim me', isDone: false }],
+  );
+});
+
+test('toTasks: defaults isDone to false unless boolean', () => {
+  assert.deepStrictEqual(
+    toTasks([
+      { id: '1', text: 'Done', isDone: true },
+      { id: '2', text: 'Not done' },
+      { id: '3', text: 'Invalid flag', isDone: 'yes' },
+    ]),
+    [
+      { id: '1', text: 'Done', isDone: true },
+      { id: '2', text: 'Not done', isDone: false },
+      { id: '3', text: 'Invalid flag', isDone: false },
+    ],
+  );
+});
+
+test('serializeProjectsForExport: handles empty projects array', () => {
+  const result = serializeProjectsForExport([]);
+  const parsed = JSON.parse(result);
+
+  assert.strictEqual(parsed.format, PROJECT_EXCHANGE_FORMAT);
+  assert.strictEqual(parsed.version, PROJECT_EXCHANGE_VERSION);
+  assert.ok(parsed.exported_at);
+  assert.ok(!Number.isNaN(Date.parse(parsed.exported_at)));
+  assert.deepStrictEqual(parsed.projects, []);
+});
+
+test('serializeProjectsForExport: maps project fields to export row', () => {
+  const project: Project = {
+    id: 'project-1',
+    title: 'Test Project',
+    type: 'web',
+    category: 'other',
+    images: ['image.webp'],
+    githubUrl: 'https://github.com/example/repo',
+    liveUrl: 'https://example.com',
+    localPath: '/Users/apple/project',
+    description: 'Project description',
+    status: 'idea',
+    lastReviewDate: '2023-01-02T10:00:00.000Z',
+    createdAt: '2023-01-01T10:00:00.000Z',
+    tasks: [{ id: 'task-1', text: 'Task 1', isDone: false }],
+  };
+
+  const parsed = JSON.parse(serializeProjectsForExport([project]));
+  assert.strictEqual(parsed.projects.length, 1);
+
+  const row = parsed.projects[0];
+  assert.strictEqual(row.id, project.id);
+  assert.strictEqual(row.title, project.title);
+  assert.strictEqual(row.type, project.type);
+  assert.strictEqual(row.category, project.category);
+  assert.deepStrictEqual(row.images, project.images);
+  assert.strictEqual(row.github_url, project.githubUrl);
+  assert.strictEqual(row.live_url, project.liveUrl);
+  assert.strictEqual(row.local_path, project.localPath);
+  assert.strictEqual(row.description, project.description);
+  assert.strictEqual(row.status, project.status);
+  assert.strictEqual(row.last_review_date, project.lastReviewDate);
+  assert.strictEqual(row.created_at, project.createdAt);
+  assert.strictEqual(row.updated_at, parsed.exported_at);
+  assert.deepStrictEqual(row.tasks, project.tasks);
+});
+
+test('serializeProjectsForExport: converts empty optional fields to null', () => {
+  const project: Project = {
+    id: 'project-2',
+    title: 'Minimal Project',
+    type: 'web',
+    category: 'other',
+    images: [],
+    githubUrl: '',
+    liveUrl: '',
+    localPath: '',
+    description: '',
+    status: 'idea',
+    lastReviewDate: '2023-01-01T10:00:00.000Z',
+    createdAt: '2023-01-01T10:00:00.000Z',
+    tasks: [],
+  };
+
+  const parsed = JSON.parse(serializeProjectsForExport([project]));
+  assert.strictEqual(parsed.projects[0].github_url, null);
+  assert.strictEqual(parsed.projects[0].live_url, null);
+  assert.strictEqual(parsed.projects[0].local_path, null);
+  assert.strictEqual(parsed.projects[0].description, null);
 });

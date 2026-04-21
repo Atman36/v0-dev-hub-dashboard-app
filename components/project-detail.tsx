@@ -28,7 +28,7 @@ import {
   Save,
   Upload,
 } from 'lucide-react';
-import { cn, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
+import { cn, getSafeExternalUrl, getSafeUrl, getSafeVsCodeUrl, openExternalUrl } from '@/lib/utils';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
 import { toast } from 'sonner';
@@ -241,10 +241,13 @@ export function ProjectDetail({
   };
 
   const handleOpenVSCode = () => {
-    const normalizedPath = project.localPath.startsWith('/')
-      ? project.localPath
-      : `/${project.localPath}`;
-    window.location.href = `vscode://file${encodeURI(normalizedPath)}`;
+    const vsCodeUrl = getSafeVsCodeUrl(project.localPath);
+    if (!vsCodeUrl) {
+      toast.error('Invalid local path for VS Code');
+      return;
+    }
+
+    window.location.href = vsCodeUrl;
   };
 
   const handleStatusChange = (status: ProjectStatus) => {
@@ -593,14 +596,18 @@ export function ProjectDetail({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          a: ({ ...props }) => (
-                            <a
-                              {...props}
-                              className="text-foreground underline underline-offset-2"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            />
-                          ),
+                          a: ({ href, ...props }) => {
+                            const safeHref = href ? getSafeUrl(href) : undefined;
+                            return (
+                              <a
+                                {...props}
+                                href={safeHref ?? undefined}
+                                className="text-foreground underline underline-offset-2"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            );
+                          },
                           table: ({ ...props }) => (
                             <div className="overflow-x-auto rounded-md border border-border">
                               <table {...props} className="min-w-full border-collapse text-sm" />

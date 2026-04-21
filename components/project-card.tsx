@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from './status-badge';
 import { ExternalLink, Github, ArrowRight, Pencil } from 'lucide-react';
-import { cn, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
+import { cn, getInitials, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
 import { ImageWithFallback } from './image-with-fallback';
 import { PROJECT_CATEGORY_LABELS } from '@/lib/constants';
 
@@ -15,25 +15,6 @@ interface ProjectCardProps {
   onClick: () => void;
   onEdit?: () => void;
   aspectRatio?: 'video' | 'portrait';
-}
-
-function getInitials(title: string) {
-  let initials = '';
-
-  for (let index = 0; index < title.length; index += 1) {
-    const char = title[index];
-    const previousChar = title[index - 1];
-
-    if ((index === 0 || previousChar === ' ') && char !== ' ') {
-      initials += char.toUpperCase();
-    }
-
-    if (initials.length === 2) {
-      break;
-    }
-  }
-
-  return initials;
 }
 
 export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {

@@ -25,6 +25,41 @@ export function getSafeExternalUrl(value: string): string | null {
   }
 }
 
+export function getSafeUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('#')) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    return trimmed;
+  }
+
+  return getSafeExternalUrl(trimmed);
+}
+
+export function getSafeVsCodeUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/[\x00-\x1F\x7F]/.test(trimmed)) return null;
+
+  let normalized = trimmed.replace(/\\/g, '/');
+  if (normalized.startsWith('//')) return null;
+  if (!normalized.startsWith('/')) {
+    normalized = `/${normalized}`;
+  }
+
+  const segments = normalized.split('/');
+  if (segments.some((segment) => segment === '.' || segment === '..')) {
+    return null;
+  }
+
+  const encodedPath = segments.map((segment) => encodeURIComponent(segment)).join('/');
+  return `vscode://file${encodedPath}`;
+}
+
 export function openExternalUrl(value: string): boolean {
   const safeUrl = getSafeExternalUrl(value);
   if (!safeUrl || typeof window === 'undefined') {
@@ -60,4 +95,23 @@ export function downloadJsonFile(content: string, filename: string): void {
 
   // Revoke the object URL after a short delay to ensure download starts
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function getInitials(title: string): string {
+  let initials = '';
+
+  for (let index = 0; index < title.length; index += 1) {
+    const char = title[index];
+    const previousChar = title[index - 1];
+
+    if ((index === 0 || previousChar === ' ') && char !== ' ') {
+      initials += char.toUpperCase();
+    }
+
+    if (initials.length === 2) {
+      break;
+    }
+  }
+
+  return initials;
 }

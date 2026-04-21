@@ -4,7 +4,10 @@ import {
   cn,
   downloadJsonFile,
   generateId,
+  getInitials,
   getSafeExternalUrl,
+  getSafeUrl,
+  getSafeVsCodeUrl,
   openExternalUrl,
 } from './utils.ts';
 
@@ -50,6 +53,39 @@ test('getSafeExternalUrl returns null for unsupported protocols', () => {
   assert.strictEqual(getSafeExternalUrl('ftp://example.com'), null);
   assert.strictEqual(getSafeExternalUrl('file:///etc/passwd'), null);
   assert.strictEqual(getSafeExternalUrl('data:text/plain,hello'), null);
+});
+
+test('getSafeUrl allows safe absolute URLs, relative paths, and anchors', () => {
+  assert.strictEqual(getSafeUrl('https://example.com'), 'https://example.com/');
+  assert.strictEqual(getSafeUrl('http://example.com/docs'), 'http://example.com/docs');
+  assert.strictEqual(getSafeUrl('/docs/getting-started'), '/docs/getting-started');
+  assert.strictEqual(getSafeUrl('#tasks'), '#tasks');
+});
+
+test('getSafeUrl blocks dangerous or ambiguous URLs', () => {
+  assert.strictEqual(getSafeUrl('javascript:alert(1)'), null);
+  assert.strictEqual(getSafeUrl('data:text/html,<script>alert(1)</script>'), null);
+  assert.strictEqual(getSafeUrl('//evil.example.com'), null);
+  assert.strictEqual(getSafeUrl('   '), null);
+});
+
+test('getSafeVsCodeUrl sanitizes local paths', () => {
+  assert.strictEqual(getSafeVsCodeUrl('/Users/apple/project'), 'vscode://file/Users/apple/project');
+  assert.strictEqual(
+    getSafeVsCodeUrl('C:\\Users\\apple\\project'),
+    'vscode://file/C%3A/Users/apple/project',
+  );
+  assert.strictEqual(
+    getSafeVsCodeUrl('/path/with spaces/file.ts'),
+    'vscode://file/path/with%20spaces/file.ts',
+  );
+});
+
+test('getSafeVsCodeUrl blocks traversal and control characters', () => {
+  assert.strictEqual(getSafeVsCodeUrl('/safe/../escape'), null);
+  assert.strictEqual(getSafeVsCodeUrl('//network/share'), null);
+  assert.strictEqual(getSafeVsCodeUrl('/tmp/\u0000bad'), null);
+  assert.strictEqual(getSafeVsCodeUrl(''), null);
 });
 
 test('getSafeExternalUrl returns null for URLs without protocol', () => {
@@ -155,4 +191,12 @@ test('downloadJsonFile creates a blob URL, clicks the link, and revokes the URL'
   assert.strictEqual(linkClicked, true);
   assert.strictEqual(linkRemoved, true);
   assert.strictEqual(revokedUrl, 'blob:mock-url');
+});
+
+test('getInitials returns up to two initials', () => {
+  assert.strictEqual(getInitials('Hello World'), 'HW');
+  assert.strictEqual(getInitials('Single'), 'S');
+  assert.strictEqual(getInitials('  leading spaces'), 'LS');
+  assert.strictEqual(getInitials('many   spaces between words'), 'MS');
+  assert.strictEqual(getInitials(''), '');
 });
