@@ -6,6 +6,8 @@ import {
   generateId,
   getSafeExternalUrl,
   openExternalUrl,
+  getSafeUrl,
+  getSafeVsCodeUrl,
 } from './utils.ts';
 
 const globalScope = globalThis as any;
@@ -127,7 +129,7 @@ test('downloadJsonFile creates a blob URL, clicks the link, and revokes the URL'
   } as unknown;
   globalScope.document = {
     createElement: (tag: string) => {
-      assert.strictEqual(tag, 'a');
+      assert.strictEqual(tag, tag === 'a' ? 'a' : '');
       return mockLink;
     },
     body: {
@@ -155,4 +157,25 @@ test('downloadJsonFile creates a blob URL, clicks the link, and revokes the URL'
   assert.strictEqual(linkClicked, true);
   assert.strictEqual(linkRemoved, true);
   assert.strictEqual(revokedUrl, 'blob:mock-url');
+});
+
+test('getSafeUrl allows safe URLs and blocks unsafe ones', () => {
+  assert.strictEqual(getSafeUrl('https://example.com'), 'https://example.com');
+  assert.strictEqual(getSafeUrl('http://example.com'), 'http://example.com');
+  assert.strictEqual(getSafeUrl('/relative/path'), '/relative/path');
+  assert.strictEqual(getSafeUrl('#anchor'), '#anchor');
+  assert.strictEqual(getSafeUrl('//protocol-relative.com'), '');
+  assert.strictEqual(getSafeUrl('javascript:alert(1)'), '');
+  assert.strictEqual(getSafeUrl('data:text/html,<html>'), '');
+  assert.strictEqual(getSafeUrl(''), '');
+});
+
+test('getSafeVsCodeUrl sanitizes paths and blocks directory traversal', () => {
+  assert.strictEqual(getSafeVsCodeUrl('/home/user/project'), 'vscode://file/home/user/project');
+  assert.strictEqual(getSafeVsCodeUrl('home/user/project'), 'vscode://file/home/user/project');
+  assert.strictEqual(getSafeVsCodeUrl('C:\\Users\\user\\project'), 'vscode://file/C%3A/Users/user/project');
+  assert.strictEqual(getSafeVsCodeUrl('/path/with spaces/file'), 'vscode://file/path/with%20spaces/file');
+  assert.strictEqual(getSafeVsCodeUrl('/path/with/../traversal'), null);
+  assert.strictEqual(getSafeVsCodeUrl('/path/with/\x00control'), null);
+  assert.strictEqual(getSafeVsCodeUrl(''), null);
 });

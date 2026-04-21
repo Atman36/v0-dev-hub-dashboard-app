@@ -28,7 +28,7 @@ import {
   Save,
   Upload,
 } from 'lucide-react';
-import { cn, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
+import { cn, getSafeExternalUrl, openExternalUrl, getSafeUrl, getSafeVsCodeUrl } from '@/lib/utils';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
 import { toast } from 'sonner';
@@ -241,10 +241,12 @@ export function ProjectDetail({
   };
 
   const handleOpenVSCode = () => {
-    const normalizedPath = project.localPath.startsWith('/')
-      ? project.localPath
-      : `/${project.localPath}`;
-    window.location.href = `vscode://file${encodeURI(normalizedPath)}`;
+    const vsCodeUrl = getSafeVsCodeUrl(project.localPath);
+    if (vsCodeUrl) {
+      window.location.href = vsCodeUrl;
+    } else {
+      toast.error('Invalid local path for VS Code');
+    }
   };
 
   const handleStatusChange = (status: ProjectStatus) => {
@@ -596,6 +598,7 @@ export function ProjectDetail({
                           a: ({ ...props }) => (
                             <a
                               {...props}
+                              href={getSafeUrl(props.href || '')}
                               className="text-foreground underline underline-offset-2"
                               target="_blank"
                               rel="noopener noreferrer"
