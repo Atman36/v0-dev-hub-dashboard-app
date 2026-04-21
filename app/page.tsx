@@ -66,35 +66,32 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Filter projects
-  const filteredProjects = useMemo(() => {
-    let result = projects;
+  // Filter and partition projects in a single pass
+  const { filteredProjects, webProjects, mobileProjects } = useMemo(() => {
+    const filtered: typeof projects = [];
+    const web: typeof projects = [];
+    const mobile: typeof projects = [];
+    const query = searchQuery?.toLowerCase() || '';
 
-    // Filter by type
-    if (activeFilter !== 'all') {
-      result = result.filter((p) => p.type === activeFilter);
-    }
+    for (const p of projects) {
+      // Filter by type
+      if (activeFilter !== 'all' && p.type !== activeFilter) {
+        continue;
+      }
 
-    // Search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.title.toLowerCase().includes(query) ||
-          p.localPath.toLowerCase().includes(query) ||
-          p.description.toLowerCase().includes(query)
-      );
-    }
+      // Filter by search query
+      if (
+        query &&
+        !p.title.toLowerCase().includes(query) &&
+        !p.localPath.toLowerCase().includes(query) &&
+        !p.description.toLowerCase().includes(query)
+      ) {
+        continue;
+      }
 
-    return result;
-  }, [projects, activeFilter, searchQuery]);
+      filtered.push(p);
 
-  // Split by sections
-  const { webProjects, mobileProjects } = useMemo(() => {
-    const web: typeof filteredProjects = [];
-    const mobile: typeof filteredProjects = [];
-
-    for (const p of filteredProjects) {
+      // Partition into sections
       if (p.type === 'web' || p.type === 'presentation') {
         web.push(p);
       } else if (p.type === 'mobile' || p.type === 'telegram') {
@@ -102,8 +99,12 @@ export default function HomePage() {
       }
     }
 
-    return { webProjects: web, mobileProjects: mobile };
-  }, [filteredProjects]);
+    return {
+      filteredProjects: filtered,
+      webProjects: web,
+      mobileProjects: mobile,
+    };
+  }, [projects, activeFilter, searchQuery]);
   const showStorageWriteError = (result: StorageWriteResult, fallback: string) => {
     if (result.ok) return;
     if (result.code === 'quota_exceeded') {
