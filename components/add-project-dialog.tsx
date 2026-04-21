@@ -33,31 +33,16 @@ import {
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
 import { cn } from '@/lib/utils';
+import { optionalUrlSchema } from '@/lib/validations';
 import { Folder, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
-
-const OptionalUrlSchema = z
-  .string()
-  .trim()
-  .refine(
-    (value) => {
-      if (!value) return true;
-      try {
-        new URL(value);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { message: 'Please enter a valid URL' }
-  );
 
 const AddProjectSchema = z.object({
   title: z.string().trim().min(1, 'Title is required'),
   type: z.enum(PROJECT_TYPES),
   category: z.enum(PROJECT_CATEGORIES),
-  githubUrl: OptionalUrlSchema,
-  liveUrl: OptionalUrlSchema,
+  githubUrl: optionalUrlSchema,
+  liveUrl: optionalUrlSchema,
   localPath: z.string().trim(),
   description: z.string().trim(),
   status: z.enum(PROJECT_STATUSES),
