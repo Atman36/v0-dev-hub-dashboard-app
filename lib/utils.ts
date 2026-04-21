@@ -25,6 +25,25 @@ export function getSafeExternalUrl(value: string): string | null {
   }
 }
 
+/**
+ * Sanitizes a URL for use in href attributes.
+ * Allows safe absolute URLs (http/https), relative paths, and anchors.
+ * Blocks dangerous protocols like javascript:, data:, etc.
+ */
+export function getSafeUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  // Allow anchors and relative paths starting with /
+  // But block // which can be a protocol-relative absolute URL
+  if (trimmed.startsWith('#') || (trimmed.startsWith('/') && !trimmed.startsWith('//'))) {
+    return trimmed;
+  }
+
+  // Delegate to getSafeExternalUrl for absolute URLs
+  return getSafeExternalUrl(trimmed);
+}
+
 export function openExternalUrl(value: string): boolean {
   const safeUrl = getSafeExternalUrl(value);
   if (!safeUrl || typeof window === 'undefined') {

@@ -28,7 +28,7 @@ import {
   Save,
   Upload,
 } from 'lucide-react';
-import { cn, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
+import { cn, getSafeExternalUrl, getSafeUrl, openExternalUrl } from '@/lib/utils';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
 import { toast } from 'sonner';
@@ -593,14 +593,18 @@ export function ProjectDetail({
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          a: ({ ...props }) => (
-                            <a
-                              {...props}
-                              className="text-foreground underline underline-offset-2"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            />
-                          ),
+                          a: ({ href, ...props }) => {
+                            const safeHref = href ? getSafeUrl(href) : undefined;
+                            return (
+                              <a
+                                {...props}
+                                href={safeHref ?? undefined}
+                                className="text-foreground underline underline-offset-2"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            );
+                          },
                           table: ({ ...props }) => (
                             <div className="overflow-x-auto rounded-md border border-border">
                               <table {...props} className="min-w-full border-collapse text-sm" />

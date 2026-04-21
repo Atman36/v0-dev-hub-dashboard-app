@@ -5,6 +5,7 @@ import {
   downloadJsonFile,
   generateId,
   getSafeExternalUrl,
+  getSafeUrl,
   openExternalUrl,
 } from './utils.ts';
 
@@ -50,6 +51,36 @@ test('getSafeExternalUrl returns null for unsupported protocols', () => {
   assert.strictEqual(getSafeExternalUrl('ftp://example.com'), null);
   assert.strictEqual(getSafeExternalUrl('file:///etc/passwd'), null);
   assert.strictEqual(getSafeExternalUrl('data:text/plain,hello'), null);
+});
+
+test('getSafeExternalUrl blocks XSS payloads', () => {
+  assert.strictEqual(getSafeExternalUrl("javascript:alert('XSS')"), null);
+  assert.strictEqual(getSafeExternalUrl('data:text/html,<script>alert(1)</script>'), null);
+  assert.strictEqual(getSafeExternalUrl('vbscript:msgbox("XSS")'), null);
+  assert.strictEqual(getSafeExternalUrl('javascript:/*--></title></style></textarea></script></template><svg/onload=\'/*<html/*/onmouseover=\'alert(1)//\'>'), null);
+});
+
+test('getSafeUrl allows safe absolute URLs', () => {
+  assert.strictEqual(getSafeUrl('https://example.com'), 'https://example.com/');
+  assert.strictEqual(getSafeUrl('http://test.org/path'), 'http://test.org/path');
+});
+
+test('getSafeUrl allows relative paths and anchors', () => {
+  assert.strictEqual(getSafeUrl('/path/to/page'), '/path/to/page');
+  assert.strictEqual(getSafeUrl('#section'), '#section');
+});
+
+test('getSafeUrl blocks dangerous absolute URLs', () => {
+  assert.strictEqual(getSafeUrl('javascript:alert(1)'), null);
+  assert.strictEqual(getSafeUrl('data:text/html,xss'), null);
+});
+
+test('getSafeUrl blocks protocol-relative URLs', () => {
+  assert.strictEqual(getSafeUrl('//google.com'), null);
+});
+
+test('getSafeUrl blocks whitespace-prefixed dangerous URLs', () => {
+  assert.strictEqual(getSafeUrl(' javascript:alert(1)'), null);
 });
 
 test('getSafeExternalUrl returns null for URLs without protocol', () => {
