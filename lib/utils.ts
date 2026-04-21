@@ -35,6 +35,31 @@ export function openExternalUrl(value: string): boolean {
   return true;
 }
 
+export function getInitials(title: string): string {
+  let first = '';
+  let i = 0;
+  const length = title.length;
+
+  // Skip leading spaces
+  while (i < length && title[i] === ' ') i++;
+  if (i === length) return '';
+
+  // Get first character of first word
+  first = title[i].toUpperCase();
+  i++;
+
+  // Find next word
+  while (i < length && title[i] !== ' ') i++;
+  if (i === length) return first;
+
+  // Skip spaces between words
+  while (i < length && title[i] === ' ') i++;
+  if (i === length) return first;
+
+  // Get first character of second word
+  return first + title[i].toUpperCase();
+}
+
 /**
  * Downloads a JSON file with the given content and filename.
  * @param content The JSON content string.

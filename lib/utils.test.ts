@@ -4,6 +4,7 @@ import {
   cn,
   downloadJsonFile,
   generateId,
+  getInitials,
   getSafeExternalUrl,
   openExternalUrl,
 } from './utils.ts';
@@ -155,4 +156,15 @@ test('downloadJsonFile creates a blob URL, clicks the link, and revokes the URL'
   assert.strictEqual(linkClicked, true);
   assert.strictEqual(linkRemoved, true);
   assert.strictEqual(revokedUrl, 'blob:mock-url');
+});
+
+test('getInitials extracts first two initials', () => {
+  assert.strictEqual(getInitials('Hello World'), 'HW');
+  assert.strictEqual(getInitials('Single'), 'S');
+  assert.strictEqual(getInitials('multiple words here'), 'MW');
+  assert.strictEqual(getInitials('  leading spaces'), 'LS');
+  assert.strictEqual(getInitials('trailing spaces  '), 'TS');
+  assert.strictEqual(getInitials('many   spaces'), 'MS');
+  assert.strictEqual(getInitials('a'), 'A');
+  assert.strictEqual(getInitials(''), '');
 });
