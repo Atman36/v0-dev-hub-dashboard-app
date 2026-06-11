@@ -32,25 +32,16 @@ import {
 } from '@/lib/constants';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
-import { cn } from '@/lib/utils';
+import { cn, getSafeExternalUrl } from '@/lib/utils';
 import { Folder, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const OptionalUrlSchema = z
   .string()
   .trim()
-  .refine(
-    (value) => {
-      if (!value) return true;
-      try {
-        new URL(value);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { message: 'Please enter a valid URL' }
-  );
+  .refine((value) => !value || getSafeExternalUrl(value) !== null, {
+    message: 'Please enter a valid http(s) URL',
+  });
 
 const AddProjectSchema = z.object({
   title: z.string().trim().min(1, 'Title is required'),

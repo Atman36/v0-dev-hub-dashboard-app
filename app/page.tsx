@@ -214,7 +214,8 @@ export default function HomePage() {
 
         <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12 sm:space-y-16">
           {/* Web & Presentations Section */}
-          {(activeFilter === 'all' || activeFilter === 'web' || activeFilter === 'presentation') && (
+          {projects.length > 0 &&
+            (activeFilter === 'all' || activeFilter === 'web' || activeFilter === 'presentation') && (
             <section className="space-y-6">
               <h2 className="text-xl font-semibold text-foreground">
                 Web & Presentations
@@ -249,7 +250,8 @@ export default function HomePage() {
           )}
 
           {/* Mobile & Telegram Section */}
-          {(activeFilter === 'all' || activeFilter === 'mobile' || activeFilter === 'telegram') && (
+          {projects.length > 0 &&
+            (activeFilter === 'all' || activeFilter === 'mobile' || activeFilter === 'telegram') && (
             <section className="space-y-6">
               <h2 className="text-xl font-semibold text-foreground">
                 Mobile & Telegram
@@ -284,7 +286,7 @@ export default function HomePage() {
           )}
 
           {/* Global empty state */}
-          {filteredProjects.length === 0 && !searchQuery && (
+          {projects.length === 0 && (
             <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-4">
               <div className="rounded-full bg-secondary/60 p-6">
                 <FileCode2 className="h-12 w-12 text-muted-foreground" />
