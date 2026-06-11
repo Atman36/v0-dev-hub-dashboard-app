@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ProjectType } from '@/lib/types';
 import { PROJECT_TYPES, PROJECT_TYPE_LABELS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface HeaderProps {
   searchQuery: string;
@@ -106,6 +107,7 @@ export function Header({
               Storage {formatBytes(storageUsageBytes)} / ~{formatBytes(storageSoftLimitBytes)} (
               {usagePercent}%)
             </span>
+            <ThemeToggle className="h-9 w-9" />
             <Button
               onClick={() => importInputRef.current?.click()}
               variant="ghost"
@@ -131,6 +133,7 @@ export function Header({
               <span className="text-accent">●</span>
             </div>
             <div className="flex items-center gap-1">
+              <ThemeToggle className="h-8 w-8" />
               <Button
                 onClick={() => importInputRef.current?.click()}
                 variant="ghost"

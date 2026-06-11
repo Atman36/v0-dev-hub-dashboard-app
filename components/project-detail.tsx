@@ -283,9 +283,24 @@ export function ProjectDetail({
       return;
     }
 
+    const githubUrlInput = editableProject.githubUrl.trim();
+    if (githubUrlInput && !getSafeExternalUrl(githubUrlInput)) {
+      toast.error('GitHub URL must be a valid http(s) link');
+      return;
+    }
+
+    const liveUrlInput = editableProject.liveUrl.trim();
+    if (liveUrlInput && !getSafeExternalUrl(liveUrlInput)) {
+      toast.error('Live URL must be a valid http(s) link');
+      return;
+    }
+
     const updates: EditableProjectFields = {
       ...editableProject,
       title,
+      githubUrl: githubUrlInput,
+      liveUrl: liveUrlInput,
+      localPath: editableProject.localPath.trim(),
       description: editableProject.description.trim(),
     };
 

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from './status-badge';
-import { ExternalLink, Github, ArrowRight, Pencil } from 'lucide-react';
+import { ExternalLink, Github, ArrowRight, Pencil, ListTodo, Clock } from 'lucide-react';
 import { cn, getInitials, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
 import { ImageWithFallback } from './image-with-fallback';
 import { PROJECT_CATEGORY_LABELS } from '@/lib/constants';
@@ -17,9 +17,19 @@ interface ProjectCardProps {
   aspectRatio?: 'video' | 'portrait';
 }
 
+const STALE_REVIEW_DAYS = 14;
+
+function getReviewAgeDays(lastReviewDate: string): number | null {
+  const reviewedAt = new Date(lastReviewDate).getTime();
+  if (!Number.isFinite(reviewedAt)) return null;
+  return Math.max(0, Math.floor((Date.now() - reviewedAt) / 86_400_000));
+}
+
 export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }: ProjectCardProps) {
   const githubUrl = getSafeExternalUrl(project.githubUrl);
   const liveUrl = getSafeExternalUrl(project.liveUrl);
+  const activeTaskCount = project.tasks.filter((task) => !task.isDone).length;
+  const reviewAgeDays = getReviewAgeDays(project.lastReviewDate);
 
   const handleGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -89,9 +99,36 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
           <Badge variant="outline" className="text-xs border-border/60 text-muted-foreground">
             {PROJECT_CATEGORY_LABELS[project.category]}
           </Badge>
+          {project.description && (
+            <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
+              {project.description}
+            </p>
+          )}
         </div>
 
-        <StatusBadge status={project.status} />
+        <div className="flex items-center justify-between gap-2">
+          <StatusBadge status={project.status} />
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            {activeTaskCount > 0 && (
+              <span className="flex items-center gap-1" title={`${activeTaskCount} open tasks`}>
+                <ListTodo className="h-3 w-3" />
+                {activeTaskCount}
+              </span>
+            )}
+            {reviewAgeDays !== null && (
+              <span
+                className={cn(
+                  'flex items-center gap-1',
+                  reviewAgeDays > STALE_REVIEW_DAYS && 'text-warning'
+                )}
+                title={`Last reviewed ${reviewAgeDays === 0 ? 'today' : `${reviewAgeDays} days ago`}`}
+              >
+                <Clock className="h-3 w-3" />
+                {reviewAgeDays === 0 ? 'today' : `${reviewAgeDays}d`}
+              </span>
+            )}
+          </div>
+        </div>
 
         {/* Actions row */}
         <div className="flex items-center gap-2 pt-1">
