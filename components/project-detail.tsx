@@ -234,7 +234,7 @@ export function ProjectDetail({
 
   const handleCopyPath = async () => {
     try {
-      await navigator.clipboard.writeText(project.localPath);
+      await navigator.clipboard.writeText(displayLocalPath);
       setCopied(true);
       toast.success('Path copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
@@ -244,7 +244,7 @@ export function ProjectDetail({
   };
 
   const handleOpenVSCode = () => {
-    const vsCodeUrl = getSafeVsCodeUrl(project.localPath);
+    const vsCodeUrl = getSafeVsCodeUrl(displayLocalPath);
     if (!vsCodeUrl) {
       toast.error('Invalid local path for VS Code');
       return;
@@ -345,6 +345,7 @@ export function ProjectDetail({
   const doneTasks = project.tasks.filter((t) => t.isDone);
   const displayImages = isEditing ? editableProject.images : project.images;
   const displayType = isEditing ? editableProject.type : project.type;
+  const displayLocalPath = isEditing ? editableProject.localPath : project.localPath;
   const githubUrl = getSafeExternalUrl(project.githubUrl);
   const liveUrl = getSafeExternalUrl(project.liveUrl);
 
@@ -390,7 +391,7 @@ export function ProjectDetail({
           <div className="flex gap-2 overflow-x-auto pb-2">
             {displayImages.slice(1).map((img, idx) => (
               <ImageWithFallback
-                key={idx}
+                key={`${img.slice(0, 24)}-${idx}`}
                 src={img}
                 alt=""
                 className="h-20 w-auto rounded border border-border object-cover"
@@ -707,7 +708,7 @@ export function ProjectDetail({
               <div className="space-y-2">
                 <div className="rounded-md bg-secondary/60 p-3">
                   <p className="font-mono text-xs text-foreground truncate">
-                    {project.localPath || 'No path set'}
+                    {displayLocalPath || 'No path set'}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -715,7 +716,7 @@ export function ProjectDetail({
                     variant="outline"
                     size="sm"
                     onClick={handleCopyPath}
-                    disabled={!project.localPath}
+                    disabled={!displayLocalPath}
                     className="gap-2"
                   >
                     {copied ? (
@@ -729,7 +730,7 @@ export function ProjectDetail({
                     variant="outline"
                     size="sm"
                     onClick={handleOpenVSCode}
-                    disabled={!project.localPath}
+                    disabled={!displayLocalPath}
                     className="gap-2"
                   >
                     <FolderOpen className="h-3.5 w-3.5" />
@@ -829,7 +830,8 @@ export function ProjectDetail({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDeleteTask(task.id)}
-                  className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+                  aria-label="Delete task"
+                  className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 h-7 w-7 p-0"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -849,7 +851,8 @@ export function ProjectDetail({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDeleteTask(task.id)}
-                  className="opacity-0 group-hover:opacity-100 h-7 w-7 p-0"
+                  aria-label="Delete task"
+                  className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 h-7 w-7 p-0"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
