@@ -93,14 +93,10 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
 
   const closeDialog = () => {
     onOpenChange(false);
-    form.reset(DEFAULT_VALUES);
   };
 
   const handleDialogOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
-    if (!nextOpen) {
-      form.reset(DEFAULT_VALUES);
-    }
   };
 
   const handleImageFiles = async (selectedFiles: File[]) => {
@@ -208,6 +204,7 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
       return;
     }
 
+    form.reset(DEFAULT_VALUES);
     closeDialog();
   });
 
