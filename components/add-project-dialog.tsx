@@ -26,9 +26,11 @@ import {
   PROJECT_TYPES,
   PROJECT_CATEGORIES,
   PROJECT_STATUSES,
+  PROJECT_VISIBILITIES,
   PROJECT_TYPE_OPTIONS,
   PROJECT_CATEGORY_OPTIONS,
   PROJECT_STATUS_OPTIONS,
+  PROJECT_VISIBILITY_OPTIONS,
 } from '@/lib/constants';
 import { generateId, StorageWriteResult } from '@/lib/storage';
 import { processImageFile } from '@/lib/image-processing';
@@ -52,6 +54,7 @@ const AddProjectSchema = z.object({
   localPath: z.string().trim(),
   description: z.string().trim(),
   status: z.enum(PROJECT_STATUSES),
+  visibility: z.enum(PROJECT_VISIBILITIES),
   images: z.array(z.string()),
 });
 
@@ -66,6 +69,7 @@ const DEFAULT_VALUES: AddProjectFormValues = {
   localPath: '',
   description: '',
   status: 'idea',
+  visibility: 'private',
   images: [],
 };
 
@@ -322,6 +326,28 @@ export function AddProjectDialog({ open, onOpenChange, onAdd }: AddProjectDialog
                     </SelectTrigger>
                     <SelectContent>
                       {PROJECT_STATUS_OPTIONS.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Visibility</Label>
+              <Controller
+                control={form.control}
+                name="visibility"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROJECT_VISIBILITY_OPTIONS.map(({ value, label }) => (
                         <SelectItem key={value} value={value}>
                           {label}
                         </SelectItem>

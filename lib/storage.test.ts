@@ -14,6 +14,7 @@ const mockProject: Project = {
   localPath: '/test/path',
   description: 'Test Description',
   status: 'idea',
+  visibility: 'private',
   lastReviewDate: '2023-10-01T00:00:00.000Z',
   tasks: [],
   createdAt: '2023-10-01T00:00:00.000Z',

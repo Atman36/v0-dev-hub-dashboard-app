@@ -1,11 +1,11 @@
 'use client';
 
 import { useRef } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Globe, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ProjectType } from '@/lib/types';
-import { PROJECT_TYPES, PROJECT_TYPE_LABELS } from '@/lib/constants';
+import { ProjectType, ProjectVisibility } from '@/lib/types';
+import { PROJECT_TYPES, PROJECT_TYPE_LABELS, PROJECT_VISIBILITIES, PROJECT_VISIBILITY_LABELS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -14,6 +14,8 @@ interface HeaderProps {
   onSearchChange: (value: string) => void;
   activeFilter: ProjectType | 'all';
   onFilterChange: (filter: ProjectType | 'all') => void;
+  visibilityFilter: ProjectVisibility | 'all';
+  onVisibilityFilterChange: (value: ProjectVisibility | 'all') => void;
   onAddProject: () => void;
   onExportProjects: () => void;
   onImportProjects: (file: File) => void;
@@ -29,11 +31,26 @@ const filters: Array<{ value: ProjectType | 'all'; label: string }> = [
   })),
 ];
 
+const visibilityFilters: Array<{
+  value: ProjectVisibility | 'all';
+  label: string;
+  icon?: typeof Globe;
+}> = [
+  { value: 'all', label: 'All' },
+  ...PROJECT_VISIBILITIES.map((visibility) => ({
+    value: visibility,
+    label: PROJECT_VISIBILITY_LABELS[visibility],
+    icon: visibility === 'public' ? Globe : Lock,
+  })),
+];
+
 export function Header({
   searchQuery,
   onSearchChange,
   activeFilter,
   onFilterChange,
+  visibilityFilter,
+  onVisibilityFilterChange,
   onAddProject,
   onExportProjects,
   onImportProjects,
@@ -66,6 +83,28 @@ export function Header({
       )}
     </button>
   ));
+
+  const visibilityPills = visibilityFilters.map((filter) => {
+    const Icon = filter.icon;
+    return (
+      <button
+        key={filter.value}
+        onClick={() => onVisibilityFilterChange(filter.value)}
+        className={cn(
+          'relative shrink-0 flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium transition-colors rounded-md',
+          visibilityFilter === filter.value
+            ? 'text-foreground'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {filter.label}
+        {visibilityFilter === filter.value && (
+          <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-accent" />
+        )}
+      </button>
+    );
+  });
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -100,7 +139,11 @@ export function Header({
             />
           </div>
 
-          <div className="flex items-center gap-1">{filterPills}</div>
+          <div className="flex items-center gap-1">
+            {filterPills}
+            <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border" />
+            {visibilityPills}
+          </div>
 
           <div className="flex items-center gap-2">
             <span className="hidden text-xs text-muted-foreground tabular-nums xl:inline">
@@ -165,6 +208,8 @@ export function Header({
 
           <div className="flex items-center gap-1 overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filterPills}
+            <span aria-hidden="true" className="h-4 w-px shrink-0 bg-border" />
+            {visibilityPills}
           </div>
         </div>
       </div>

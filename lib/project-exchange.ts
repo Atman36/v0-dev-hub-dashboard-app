@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { Project, ProjectCategory, ProjectStatus, ProjectType, Task } from './types.ts';
-import { PROJECT_TYPES, PROJECT_CATEGORIES, PROJECT_STATUSES } from './constants.ts';
+import type { Project, ProjectCategory, ProjectStatus, ProjectType, ProjectVisibility, Task } from './types.ts';
+import { PROJECT_TYPES, PROJECT_CATEGORIES, PROJECT_STATUSES, PROJECT_VISIBILITIES } from './constants.ts';
 import { generateId } from './utils.ts';
 
 export const PROJECT_EXCHANGE_FORMAT = 'devhub.projects';
@@ -9,6 +9,7 @@ export const PROJECT_EXCHANGE_VERSION = 1;
 const ProjectTypeSchema = z.enum(PROJECT_TYPES);
 const ProjectCategorySchema = z.enum(PROJECT_CATEGORIES);
 const ProjectStatusSchema = z.enum(PROJECT_STATUSES);
+const ProjectVisibilitySchema = z.enum(PROJECT_VISIBILITIES);
 
 const ImportedProjectSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -21,6 +22,7 @@ const ImportedProjectSchema = z.object({
   localPath: z.string(),
   description: z.string(),
   status: ProjectStatusSchema.catch('idea'),
+  visibility: ProjectVisibilitySchema.catch('private').optional(),
   lastReviewDate: z.string().optional(),
   createdAt: z.string().optional(),
   tasks: z.array(z.any()), // Manual validation already handled by toTasks
@@ -37,6 +39,7 @@ export interface SupabaseProjectRow {
   local_path: string | null;
   description: string | null;
   status: ProjectStatus;
+  visibility: ProjectVisibility;
   last_review_date: string;
   tasks: Task[];
   created_at: string;
@@ -146,6 +149,7 @@ function toProjectImportInput(candidate: Record<string, unknown>) {
     localPath: toString(candidate.localPath ?? candidate.local_path),
     description: toString(candidate.description),
     status: candidate.status,
+    visibility: candidate.visibility,
     lastReviewDate: toOptionalNonEmptyString(candidate.lastReviewDate ?? candidate.last_review_date),
     createdAt: toOptionalNonEmptyString(candidate.createdAt ?? candidate.created_at),
     tasks: toTasks(candidate.tasks),
@@ -173,6 +177,7 @@ export function normalizeToProject(candidate: unknown): Project | null {
     localPath: parsed.data.localPath,
     description: parsed.data.description,
     status: parsed.data.status,
+    visibility: parsed.data.visibility ?? 'private',
     lastReviewDate,
     tasks: parsed.data.tasks,
     createdAt,
@@ -191,6 +196,7 @@ export function projectToSupabaseRow(project: Project, updatedAt: string): Supab
     local_path: project.localPath || null,
     description: project.description || null,
     status: project.status,
+    visibility: project.visibility,
     last_review_date: project.lastReviewDate,
     tasks: project.tasks,
     created_at: project.createdAt,

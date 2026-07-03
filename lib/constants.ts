@@ -3,6 +3,7 @@ export const STORAGE_KEY = 'devhub_projects';
 export const PROJECT_TYPES = ['web', 'mobile', 'telegram', 'presentation'] as const;
 export const PROJECT_CATEGORIES = ['startup', 'site', 'app', 'bot', 'other'] as const;
 export const PROJECT_STATUSES = ['idea', 'in-progress', 'mvp', 'live', 'archived'] as const;
+export const PROJECT_VISIBILITIES = ['public', 'private'] as const;
 
 export const PROJECT_TYPE_LABELS: Record<typeof PROJECT_TYPES[number], string> = {
   web: 'Web',
@@ -41,3 +42,13 @@ export const PROJECT_STATUS_OPTIONS = PROJECT_STATUSES.map((value) => ({
   value,
   label: PROJECT_STATUS_LABELS[value],
 })) satisfies ReadonlyArray<{ value: (typeof PROJECT_STATUSES)[number]; label: string }>;
+
+export const PROJECT_VISIBILITY_LABELS: Record<typeof PROJECT_VISIBILITIES[number], string> = {
+  public: 'Public',
+  private: 'Private',
+};
+
+export const PROJECT_VISIBILITY_OPTIONS = PROJECT_VISIBILITIES.map((value) => ({
+  value,
+  label: PROJECT_VISIBILITY_LABELS[value],
+})) satisfies ReadonlyArray<{ value: (typeof PROJECT_VISIBILITIES)[number]; label: string }>;

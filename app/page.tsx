@@ -6,7 +6,7 @@ import { Header } from '@/components/header';
 import { ProjectCard } from '@/components/project-card';
 import { AddProjectDialog } from '@/components/add-project-dialog';
 import { ProjectDetail } from '@/components/project-detail';
-import { ProjectType } from '@/lib/types';
+import { ProjectType, ProjectVisibility } from '@/lib/types';
 import {
   estimateProjectsStorageUsageBytes,
   LOCAL_STORAGE_SOFT_LIMIT_BYTES,
@@ -28,6 +28,7 @@ export default function HomePage() {
   } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ProjectType | 'all'>('all');
+  const [visibilityFilter, setVisibilityFilter] = useState<ProjectVisibility | 'all'>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [startInEditMode, setStartInEditMode] = useState(false);
@@ -75,6 +76,10 @@ export default function HomePage() {
       result = result.filter((p) => p.type === activeFilter);
     }
 
+    if (visibilityFilter !== 'all') {
+      result = result.filter((p) => p.visibility === visibilityFilter);
+    }
+
     // Search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -87,7 +92,7 @@ export default function HomePage() {
     }
 
     return result;
-  }, [projects, activeFilter, searchQuery]);
+  }, [projects, activeFilter, visibilityFilter, searchQuery]);
 
   // Split by sections
   const { webProjects, mobileProjects } = useMemo(() => {
@@ -205,6 +210,8 @@ export default function HomePage() {
           onSearchChange={setSearchQuery}
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
+          visibilityFilter={visibilityFilter}
+          onVisibilityFilterChange={setVisibilityFilter}
           onAddProject={() => setShowAddDialog(true)}
           onExportProjects={handleExportProjects}
           onImportProjects={handleImportProjects}

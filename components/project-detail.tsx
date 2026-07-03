@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Project, ProjectStatus, Task } from '@/lib/types';
+import { Project, ProjectStatus, ProjectVisibility, Task } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,8 @@ import {
   Pencil,
   Save,
   Upload,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { cn, getSafeExternalUrl, getSafeUrl, getSafeVsCodeUrl, openExternalUrl } from '@/lib/utils';
 import { generateId, StorageWriteResult } from '@/lib/storage';
@@ -41,6 +43,7 @@ import {
   PROJECT_STATUS_OPTIONS,
   PROJECT_TYPE_LABELS,
   PROJECT_CATEGORY_LABELS,
+  PROJECT_VISIBILITY_LABELS,
 } from '@/lib/constants';
 
 type EditableProjectFields = Pick<
@@ -259,6 +262,13 @@ export function ProjectDetail({
   const handleMarkReviewed = () => {
     if (withUpdate({ lastReviewDate: new Date().toISOString() })) {
       toast.success('Marked as reviewed today');
+    }
+  };
+
+  const handleToggleVisibility = () => {
+    const next: ProjectVisibility = project.visibility === 'public' ? 'private' : 'public';
+    if (withUpdate({ visibility: next })) {
+      toast.success(next === 'public' ? 'Project is now public' : 'Project is now private');
     }
   };
 
@@ -601,10 +611,16 @@ export function ProjectDetail({
                         <Badge variant="outline">{PROJECT_TYPE_LABELS[project.type]}</Badge>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsEditing(true)}>
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="gap-2" onClick={handleToggleVisibility}>
+                        {project.visibility === 'public' ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                        {PROJECT_VISIBILITY_LABELS[project.visibility]}
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsEditing(true)}>
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </div>
                   </div>
                   {project.description && (
                     <div className="space-y-3 text-muted-foreground leading-relaxed">

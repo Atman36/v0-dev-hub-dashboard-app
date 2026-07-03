@@ -5,10 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from './status-badge';
-import { ExternalLink, Github, ArrowRight, Pencil, ListTodo, Clock } from 'lucide-react';
+import { ExternalLink, Github, ArrowRight, Pencil, ListTodo, Clock, Globe, Lock } from 'lucide-react';
 import { cn, getInitials, getSafeExternalUrl, openExternalUrl } from '@/lib/utils';
 import { ImageWithFallback } from './image-with-fallback';
-import { PROJECT_CATEGORY_LABELS } from '@/lib/constants';
+import { PROJECT_CATEGORY_LABELS, PROJECT_VISIBILITY_LABELS } from '@/lib/constants';
 
 interface ProjectCardProps {
   project: Project;
@@ -96,9 +96,15 @@ export function ProjectCard({ project, onClick, onEdit, aspectRatio = 'video' }:
               {project.title}
             </h3>
           </div>
-          <Badge variant="outline" className="text-xs border-border/60 text-muted-foreground">
-            {PROJECT_CATEGORY_LABELS[project.category]}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs border-border/60 text-muted-foreground">
+              {PROJECT_CATEGORY_LABELS[project.category]}
+            </Badge>
+            <Badge variant="outline" className="text-xs border-border/60 text-muted-foreground">
+              {project.visibility === 'public' ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+              {PROJECT_VISIBILITY_LABELS[project.visibility]}
+            </Badge>
+          </div>
           {project.description && (
             <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
               {project.description}

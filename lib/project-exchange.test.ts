@@ -92,6 +92,35 @@ test('normalizeToProject: handles enum defaults for invalid values', () => {
   }
 });
 
+test('normalizeToProject: defaults missing visibility to private', () => {
+  const candidate = {
+    title: 'No Visibility Project',
+  };
+  const project = normalizeToProject(candidate);
+  assert.notStrictEqual(project, null);
+  assert.strictEqual(project?.visibility, 'private');
+});
+
+test('normalizeToProject: falls back to private on invalid visibility', () => {
+  const candidate = {
+    title: 'Invalid Visibility Project',
+    visibility: 'friends-only',
+  };
+  const project = normalizeToProject(candidate);
+  assert.notStrictEqual(project, null);
+  assert.strictEqual(project?.visibility, 'private');
+});
+
+test('normalizeToProject: preserves explicit public visibility', () => {
+  const candidate = {
+    title: 'Public Project',
+    visibility: 'public',
+  };
+  const project = normalizeToProject(candidate);
+  assert.notStrictEqual(project, null);
+  assert.strictEqual(project?.visibility, 'public');
+});
+
 test('normalizeToProject: normalizes dates', () => {
   const candidate = {
     title: 'Date Normalization Project',
@@ -239,6 +268,7 @@ test('serializeProjectsForExport: maps project fields to export row', () => {
     localPath: '/Users/apple/project',
     description: 'Project description',
     status: 'idea',
+    visibility: 'public',
     lastReviewDate: '2023-01-02T10:00:00.000Z',
     createdAt: '2023-01-01T10:00:00.000Z',
     tasks: [{ id: 'task-1', text: 'Task 1', isDone: false }],
@@ -258,6 +288,7 @@ test('serializeProjectsForExport: maps project fields to export row', () => {
   assert.strictEqual(row.local_path, project.localPath);
   assert.strictEqual(row.description, project.description);
   assert.strictEqual(row.status, project.status);
+  assert.strictEqual(row.visibility, project.visibility);
   assert.strictEqual(row.last_review_date, project.lastReviewDate);
   assert.strictEqual(row.created_at, project.createdAt);
   assert.strictEqual(row.updated_at, parsed.exported_at);
@@ -276,6 +307,7 @@ test('serializeProjectsForExport: converts empty optional fields to null', () =>
     localPath: '',
     description: '',
     status: 'idea',
+    visibility: 'private',
     lastReviewDate: '2023-01-01T10:00:00.000Z',
     createdAt: '2023-01-01T10:00:00.000Z',
     tasks: [],
@@ -286,4 +318,29 @@ test('serializeProjectsForExport: converts empty optional fields to null', () =>
   assert.strictEqual(parsed.projects[0].live_url, null);
   assert.strictEqual(parsed.projects[0].local_path, null);
   assert.strictEqual(parsed.projects[0].description, null);
+});
+
+test('serializeProjectsForExport: includes visibility in export row', () => {
+  const base: Project = {
+    id: 'project-3',
+    title: 'Visibility Project',
+    type: 'web',
+    category: 'other',
+    images: [],
+    githubUrl: '',
+    liveUrl: '',
+    localPath: '',
+    description: '',
+    status: 'idea',
+    visibility: 'private',
+    lastReviewDate: '2023-01-01T10:00:00.000Z',
+    createdAt: '2023-01-01T10:00:00.000Z',
+    tasks: [],
+  };
+
+  const parsed = JSON.parse(
+    serializeProjectsForExport([base, { ...base, id: 'project-4', visibility: 'public' }])
+  );
+  assert.strictEqual(parsed.projects[0].visibility, 'private');
+  assert.strictEqual(parsed.projects[1].visibility, 'public');
 });
