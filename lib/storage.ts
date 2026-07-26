@@ -6,6 +6,8 @@ import {
 } from './project-exchange.ts';
 import { STORAGE_KEY } from './constants.ts';
 export const LOCAL_STORAGE_SOFT_LIMIT_BYTES = 5 * 1024 * 1024;
+/** Share of the soft limit above which the UI starts warning about a possible data loss. */
+export const LOCAL_STORAGE_WARN_RATIO = 0.85;
 
 type ImportMode = 'replace' | 'merge';
 

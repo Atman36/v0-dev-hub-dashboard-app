@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useProjects } from '@/hooks/use-projects';
 import { Header } from '@/components/header';
 import { ProjectCard } from '@/components/project-card';
@@ -10,6 +10,7 @@ import { ProjectType, ProjectVisibility } from '@/lib/types';
 import {
   estimateProjectsStorageUsageBytes,
   LOCAL_STORAGE_SOFT_LIMIT_BYTES,
+  LOCAL_STORAGE_WARN_RATIO,
   StorageWriteResult,
 } from '@/lib/storage';
 import { FileCode2 } from 'lucide-react';
@@ -32,6 +33,7 @@ export default function HomePage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [startInEditMode, setStartInEditMode] = useState(false);
+  const hasWarnedAboutStorageRef = useRef(false);
   const storageUsageBytes = useMemo(
     () => estimateProjectsStorageUsageBytes(projects),
     [projects]
@@ -45,7 +47,9 @@ export default function HomePage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      // Lowercase so the shortcuts still fire with Caps Lock or Shift held.
+      const key = e.key.toLowerCase();
+      if ((e.metaKey || e.ctrlKey) && key === 'k') {
         e.preventDefault();
         const searchInput = document.getElementById(
           window.matchMedia('(min-width: 768px)').matches
@@ -57,7 +61,7 @@ export default function HomePage() {
           searchInput.select();
         }
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+      if ((e.metaKey || e.ctrlKey) && key === 'n') {
         e.preventDefault();
         setShowAddDialog(true);
       }
@@ -109,6 +113,12 @@ export default function HomePage() {
 
     return { webProjects: web, mobileProjects: mobile };
   }, [filteredProjects]);
+
+  // A section can be empty because of the search box or any active filter, not only
+  // because the user never added that kind of project.
+  const hasNarrowedResults =
+    searchQuery.trim() !== '' || activeFilter !== 'all' || visibilityFilter !== 'all';
+
   const showStorageWriteError = (result: StorageWriteResult, fallback: string) => {
     if (result.ok) return;
     if (result.code === 'quota_exceeded') {
@@ -142,12 +152,12 @@ export default function HomePage() {
     toast.success('Project deleted');
   };
 
-  const handleExportProjects = () => {
+  const handleExportProjects = useCallback(() => {
     const payload = exportProjects();
     const filename = `devhub-projects-${new Date().toISOString().slice(0, 10)}.json`;
     downloadJsonFile(payload, filename);
     toast.success('Projects exported');
-  };
+  }, [exportProjects]);
 
   const handleImportProjects = async (file: File) => {
     try {
@@ -173,6 +183,22 @@ export default function HomePage() {
       toast.error(`Import failed: ${message}`);
     }
   };
+
+  // Everything lives in localStorage, so hitting the quota means writes start failing
+  // silently from the user's point of view. Warn once per crossing of the threshold.
+  useEffect(() => {
+    if (storageUsageBytes < LOCAL_STORAGE_SOFT_LIMIT_BYTES * LOCAL_STORAGE_WARN_RATIO) {
+      hasWarnedAboutStorageRef.current = false;
+      return;
+    }
+    if (hasWarnedAboutStorageRef.current) return;
+    hasWarnedAboutStorageRef.current = true;
+
+    toast.warning('Local storage is almost full. Export a backup and remove heavy screenshots.', {
+      duration: 10000,
+      action: { label: 'Export', onClick: handleExportProjects },
+    });
+  }, [storageUsageBytes, handleExportProjects]);
 
   useEffect(() => {
     if (!selectedProjectId) return;
@@ -249,7 +275,7 @@ export default function HomePage() {
                 <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary/20 py-16">
                   <FileCode2 className="h-12 w-12 text-muted-foreground/40 mb-4" />
                   <p className="text-muted-foreground">
-                    {searchQuery ? 'No matching projects' : 'No web projects yet'}
+                    {hasNarrowedResults ? 'No matching projects' : 'No web projects yet'}
                   </p>
                 </div>
               )}
@@ -285,7 +311,7 @@ export default function HomePage() {
                 <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary/20 py-16">
                   <FileCode2 className="h-12 w-12 text-muted-foreground/40 mb-4" />
                   <p className="text-muted-foreground">
-                    {searchQuery ? 'No matching projects' : 'No mobile projects yet'}
+                    {hasNarrowedResults ? 'No matching projects' : 'No mobile projects yet'}
                   </p>
                 </div>
               )}

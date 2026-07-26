@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ProjectType, ProjectVisibility } from '@/lib/types';
 import { PROJECT_TYPES, PROJECT_TYPE_LABELS, PROJECT_VISIBILITIES, PROJECT_VISIBILITY_LABELS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { LOCAL_STORAGE_WARN_RATIO } from '@/lib/storage';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 interface HeaderProps {
@@ -59,6 +60,7 @@ export function Header({
 }: HeaderProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const usagePercent = Math.min(100, Math.round((storageUsageBytes / storageSoftLimitBytes) * 100));
+  const isStorageNearLimit = storageUsageBytes >= storageSoftLimitBytes * LOCAL_STORAGE_WARN_RATIO;
 
   const formatBytes = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -69,6 +71,8 @@ export function Header({
   const filterPills = filters.map((filter) => (
     <button
       key={filter.value}
+      type="button"
+      aria-pressed={activeFilter === filter.value}
       onClick={() => onFilterChange(filter.value)}
       className={cn(
         'relative shrink-0 px-4 py-1.5 text-sm font-medium transition-colors rounded-md',
@@ -89,6 +93,8 @@ export function Header({
     return (
       <button
         key={filter.value}
+        type="button"
+        aria-pressed={visibilityFilter === filter.value}
         onClick={() => onVisibilityFilterChange(filter.value)}
         className={cn(
           'relative shrink-0 flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium transition-colors rounded-md',
@@ -146,7 +152,17 @@ export function Header({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden text-xs text-muted-foreground tabular-nums xl:inline">
+            <span
+              className={cn(
+                'hidden whitespace-nowrap text-xs tabular-nums xl:inline',
+                isStorageNearLimit ? 'text-warning font-medium' : 'text-muted-foreground'
+              )}
+              title={
+                isStorageNearLimit
+                  ? 'Local storage is almost full — export a backup and remove heavy screenshots.'
+                  : undefined
+              }
+            >
               Storage {formatBytes(storageUsageBytes)} / ~{formatBytes(storageSoftLimitBytes)} (
               {usagePercent}%)
             </span>

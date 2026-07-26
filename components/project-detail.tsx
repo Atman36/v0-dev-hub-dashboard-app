@@ -89,6 +89,12 @@ export function ProjectDetail({
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [isDropActive, setIsDropActive] = useState(false);
   const dragDepthRef = useRef(0);
+  // Keeps the newest task list reachable from deferred callbacks (the undo toast).
+  const tasksRef = useRef(project.tasks);
+
+  useEffect(() => {
+    tasksRef.current = project.tasks;
+  }, [project.tasks]);
 
   useEffect(() => {
     setIsEditing(startInEditMode);
@@ -250,7 +256,7 @@ export function ProjectDetail({
       return;
     }
 
-    window.location.href = vsCodeUrl;
+    window.location.assign(vsCodeUrl);
   };
 
   const handleStatusChange = (status: ProjectStatus) => {
@@ -329,8 +335,28 @@ export function ProjectDetail({
   };
 
   const handleDeleteTask = (taskId: string) => {
-    const updatedTasks = project.tasks.filter((task) => task.id !== taskId);
-    withUpdate({ tasks: updatedTasks });
+    const removedIndex = project.tasks.findIndex((task) => task.id === taskId);
+    if (removedIndex === -1) return;
+    const removedTask = project.tasks[removedIndex];
+
+    if (!withUpdate({ tasks: project.tasks.filter((_, index) => index !== removedIndex) })) {
+      return;
+    }
+
+    toast.success('Task deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          // Restore into the latest task list, not the stale one this closure captured,
+          // so tasks added or toggled in the meantime survive the undo.
+          const currentTasks = tasksRef.current;
+          if (currentTasks.some((task) => task.id === removedTask.id)) return;
+          const restoredTasks = [...currentTasks];
+          restoredTasks.splice(Math.min(removedIndex, restoredTasks.length), 0, removedTask);
+          withUpdate({ tasks: restoredTasks });
+        },
+      },
+    });
   };
 
   const handleDeleteProject = () => {
@@ -613,7 +639,16 @@ export function ProjectDetail({
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="gap-2" onClick={handleToggleVisibility}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={handleToggleVisibility}
+                        aria-pressed={project.visibility === 'public'}
+                        title={
+                          project.visibility === 'public' ? 'Make project private' : 'Make project public'
+                        }
+                      >
                         {project.visibility === 'public' ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                         {PROJECT_VISIBILITY_LABELS[project.visibility]}
                       </Button>
@@ -861,7 +896,7 @@ export function ProjectDetail({
 
             {project.tasks.length === 0 && (
               <p className="text-center text-sm text-muted-foreground py-8">
-                No next steps. What's the plan?
+                No next steps. What&apos;s the plan?
               </p>
             )}
           </div>
