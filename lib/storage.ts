@@ -98,7 +98,10 @@ export const storage = {
 
   deleteProject(id: string): StorageWriteResult {
     const projects = this.getProjects();
-    return this.saveProjects(projects.filter((p) => p.id !== id));
+    if (!projects.some((project) => project.id === id)) {
+      return { ok: false, code: 'storage_error', message: 'Project not found.' };
+    }
+    return this.saveProjects(projects.filter((project) => project.id !== id));
   },
 
   getProject(id: string): Project | undefined {

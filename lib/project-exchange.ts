@@ -106,6 +106,7 @@ function toStringArray(value: unknown): string[] {
 export function toTasks(value: unknown): Task[] {
   const items = toUnknownArray(value);
   const tasks: Task[] = [];
+  const taskIds = new Set<string>();
 
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
@@ -123,9 +124,11 @@ export function toTasks(value: unknown): Task[] {
     const id = idRaw.trim();
     const text = textRaw.trim();
 
-    if (id.length === 0 || text.length === 0) {
+    if (id.length === 0 || text.length === 0 || taskIds.has(id)) {
       continue;
     }
+
+    taskIds.add(id);
 
     tasks.push({
       id,
@@ -222,6 +225,14 @@ export function parseImportedProjects(rawData: string): ParsedImportResult {
     parsed = JSON.parse(rawData);
   } catch {
     throw new Error('Invalid JSON file');
+  }
+
+  if (
+    isRecord(parsed) &&
+    parsed.format === PROJECT_EXCHANGE_FORMAT &&
+    (typeof parsed.version !== 'number' || parsed.version !== PROJECT_EXCHANGE_VERSION)
+  ) {
+    throw new Error('Unsupported project exchange version.');
   }
 
   let candidates: unknown[] = [];

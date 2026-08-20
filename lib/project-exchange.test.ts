@@ -5,6 +5,7 @@ import {
   PROJECT_EXCHANGE_FORMAT,
   PROJECT_EXCHANGE_VERSION,
   serializeProjectsForExport,
+  parseImportedProjects,
   toTasks,
 } from './project-exchange.ts';
 import type { Project } from './types.ts';
@@ -343,4 +344,62 @@ test('serializeProjectsForExport: includes visibility in export row', () => {
   );
   assert.strictEqual(parsed.projects[0].visibility, 'private');
   assert.strictEqual(parsed.projects[1].visibility, 'public');
+});
+
+test('parseImportedProjects: accepts the current marked exchange version', () => {
+  const result = parseImportedProjects(
+    JSON.stringify({
+      format: PROJECT_EXCHANGE_FORMAT,
+      version: PROJECT_EXCHANGE_VERSION,
+      projects: [{ id: 'current-project', title: 'Current Project' }],
+    })
+  );
+
+  assert.strictEqual(result.detectedFormat, PROJECT_EXCHANGE_FORMAT);
+  assert.deepStrictEqual(result.projects.map((project) => project.id), ['current-project']);
+});
+
+test('parseImportedProjects: rejects marked exchanges without the current version', () => {
+  for (const version of [undefined, '1', PROJECT_EXCHANGE_VERSION - 1, PROJECT_EXCHANGE_VERSION + 1]) {
+    assert.throws(
+      () =>
+        parseImportedProjects(
+          JSON.stringify({
+            format: PROJECT_EXCHANGE_FORMAT,
+            ...(version === undefined ? {} : { version }),
+            projects: [{ title: 'Would otherwise normalize' }],
+          })
+        ),
+      { message: 'Unsupported project exchange version.' }
+    );
+  }
+});
+
+test('parseImportedProjects: keeps generic envelopes compatible', () => {
+  for (const payload of [
+    [{ id: 'array-project', title: 'Array Project' }],
+    { projects: [{ id: 'projects-project', title: 'Projects Project' }] },
+    { data: [{ id: 'data-project', title: 'Data Project' }] },
+    { rows: [{ id: 'rows-project', title: 'Rows Project' }] },
+  ]) {
+    const result = parseImportedProjects(JSON.stringify(payload));
+    assert.strictEqual(result.projects.length, 1);
+  }
+});
+
+test('toTasks: keeps the first valid occurrence of each trimmed ID', () => {
+  assert.deepStrictEqual(
+    toTasks([
+      { id: 'first', text: '   ' },
+      { id: ' first ', text: 'First task', isDone: false },
+      { id: 'second', text: 'Second task', isDone: true },
+      { id: 'first', text: 'Later duplicate', isDone: true },
+      { id: ' third ', text: 'Third task', isDone: false },
+    ]),
+    [
+      { id: 'first', text: 'First task', isDone: false },
+      { id: 'second', text: 'Second task', isDone: true },
+      { id: 'third', text: 'Third task', isDone: false },
+    ]
+  );
 });
