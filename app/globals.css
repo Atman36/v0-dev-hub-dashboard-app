@@ -30,7 +30,7 @@
   --chart-5: hsl(340 75% 55%);
   --radius: 0.625rem;
   --success: hsl(142 71% 45%);
-  --warning: hsl(38 92% 50%);
+  --warning: hsl(38 92% 30%);
   --info: hsl(199 89% 48%);
   --sidebar: hsl(220 14% 97%);
   --sidebar-foreground: hsl(220 14% 10%);
